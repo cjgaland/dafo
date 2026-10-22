@@ -14,6 +14,7 @@
   const URL_IND = "https://cjgaland.github.io/indicadores-calidad/";
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
   const URL_AMFE = "https://cjgaland.github.io/amfe/";
+  const URL_FLUJO = "https://cjgaland.github.io/flujograma/";
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -1414,7 +1415,7 @@
   }
 
   const API = {
-    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_AMFE,
+    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_AMFE, URL_FLUJO,
     lleno, sinTildes, num, entero1a5, corto, normal, plural, minuscula,
     CUADRANTES, TIPOS, esInterno, PASOS,
     TIPOS_OBJETO, FINALIDADES, aniosHorizonte, FUENTES_TIPO, APORTA, AREAS, AMBITOS, BLOQUES_ACSA, AREA_A_BLOQUE, areasDe, nombreArea,

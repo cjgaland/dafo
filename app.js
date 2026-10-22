@@ -14,8 +14,10 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.05";
+  const APP_VERSION = "2026.06";
   const NOVEDADES = [
+    { version: "2026.06", fecha: "Octubre 2026", titulo: "Nueva app hermana: Flujograma", cambios: [
+      "Enlace a la nueva app hermana Flujograma (escribe los pasos de un proceso y la app dibuja el diagrama, con sus puntos críticos) en la portada y en «Acerca de». La portada enlaza también a Tamaño Muestral."] },
     { version: "2026.05", fecha: "Octubre 2026", titulo: "Ponte a prueba, minicasos y «Traer de AMFE»", cambios: [
       "«Ponte a prueba»: 20 preguntas en cuatro bloques, con su explicación y un enlace al tema de «Aprende» que conviene repasar.",
       "Tres ejercicios prácticos: ¿fortaleza, debilidad, oportunidad o amenaza?, ¿sirve como factor? y ¿qué estrategia CAME sale de este cruce?",
@@ -238,6 +240,8 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_AMFE}" target="_blank" rel="noopener"><span class="guide-num">!</span><div><div class="guide-q">AMFE ↗</div><div class="guide-a">App hermana: si una debilidad es un <b>proceso con riesgo</b> para el paciente, analiza qué puede fallar en él.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_AUD}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Auditorías ↗</div><div class="guide-a">App hermana: <b>mide con una auditoría</b> si una práctica se cumple (higiene de manos, registros…).</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña los indicadores</b> con los que medirás tu plan de acción.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_FLUJO}" target="_blank" rel="noopener"><span class="guide-num">→</span><div><div class="guide-q">Flujograma ↗</div><div class="guide-a">App hermana: <b>dibuja el flujograma</b> del proceso que quieres mejorar, con sus puntos críticos.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b> para medir tus indicadores.</div></div><span class="guide-go">›</span></a>
       </div>
       ${practica("<b>Protección de datos:</b> un DAFO analiza una unidad, no a personas. No escribas nombres de pacientes ni de profesionales, ni números de historia clínica.")}`;
   }
