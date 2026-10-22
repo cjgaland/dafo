@@ -221,12 +221,118 @@ eq("Ejemplo: progreso de los pasos 5 y 6", [L.progreso(ej)[5], L.progreso(ej)[6]
 // Excel
 const X = require("../xlsx.js");
 const libro = L.hojasExcel(ej, "22/10/2026");
-eq("Excel: hojas", libro.hojas.map(h => h.nombre), ["Factores", "Matriz DAFO", "Matriz cruzada", "Fuentes", "Ficha"]);
+eq("Excel: hojas", libro.hojas.map(h => h.nombre), ["Factores", "Matriz DAFO", "Matriz cruzada", "Estrategias", "Plan de acción", "Candidatos", "Fuentes", "Ficha"]);
 eq("Excel: una fila por factor", libro.hojas[0].filas.length - 3, 24);
 t("Excel: estilos usados existen", libro.hojas.every(h => h.filas.every(f => f.every(c => !c || !c.estilo || L.ESTILOS_XLSX[c.estilo]))));
 const bytes = X.construirLibroXlsx(libro);
 t("Excel: se construye un .xlsx (ZIP)", bytes.length > 3000 && bytes[0] === 0x50 && bytes[1] === 0x4b);
 t("Excel de un DAFO vacío", X.construirLibroXlsx(L.hojasExcel(L.nuevoDafo("v", "t"), "hoy")).length > 1000);
+
+// ---------- Entrega 3 ----------
+// Impacto × viabilidad
+const zE = (i, v) => L.zonaEstrategia({ impacto: String(i), viabilidad: String(v) });
+eq("Zonas impacto × viabilidad", [zE(3, 3), zE(3, 2), zE(2, 3), zE(3, 1), zE(2, 2), zE(1, 3), zE(1, 2), zE(2, 1), zE(1, 1), zE("", 2)], ["ya", "ya", "ya", "planificar", "pronto", "rapida", "rapida", "reconsiderar", "reconsiderar", null]);
+const eA = Object.assign(L.nuevaEstrategia("e1", "C", 1), { impacto: "2", viabilidad: "2" });
+eq("Elegida: por la zona", L.esElegida(eA), false);
+eA.elegida = "si"; eq("Elegida: a mano", L.esElegida(eA), true);
+eA.elegida = "no"; eA.impacto = "3"; eA.viabilidad = "3"; eq("Descartada a mano aunque sea «hazla ya»", L.esElegida(eA), false);
+eq("Código de estrategia", L.codigoEst(eA), "E1");
+
+// Propuestas desde los cruces fuertes del ejemplo (agrupadas por el factor interno)
+const ej0 = JSON.parse(JSON.stringify(ej)); ej0.estrategias = [];
+const prop = L.estrategiasPropuestas(ej0);
+eq("Propuestas: una por factor interno y bloque", prop.map(p => p.tipo + ":" + p.origen.split(":")[1]), ["E:FO", "M:FA", "M:FA", "C:DO", "C:DO", "C:DO", "C:DO", "C:DO", "A:DA"]);
+const pDA = prop.find(p => p.origen.startsWith("cruce:DA"));
+t("Propuesta DA con sus tres amenazas", pDA.factores.length === 4 && pDA.texto.startsWith("Reducir «demora") && pDA.texto.includes("(A3)") && pDA.texto.includes("nos afecten menos"));
+eq("No repite las ya propuestas", L.estrategiasPropuestas(ej).length, 0);
+const sinCruces = JSON.parse(JSON.stringify(ej0)); sinCruces.cruces = {};
+const p2 = L.estrategiasPropuestas(sinCruces);
+eq("Sin matriz cruzada: una por factor prioritario", [p2.length, p2[0].tipo, p2.filter(p => p.tipo === "C").length], [20, "M", 5]);
+
+// Avisos del paso 7
+const av = JSON.parse(JSON.stringify(ej0));
+av.estrategias = [Object.assign(L.nuevaEstrategia("s1", "C", 1), { texto: "Revisar los protocolos caducados con la Agencia", factores: ["ej-fa-D3"], impacto: "3", viabilidad: "3" }),
+  Object.assign(L.nuevaEstrategia("s2", "C", 2), { texto: "Mejorar la calidad", impacto: "3", viabilidad: "3" }),
+  Object.assign(L.nuevaEstrategia("s3", "C", 3), { texto: "Plan de higiene de manos con observación", factores: ["ej-fa-D5"], impacto: "1", viabilidad: "1", elegida: "si" })];
+const a7 = L.avisosEstrategias(av);
+t("Paso 7: estrategia sin factores", a7.some(x => x.estrategia === "s2" && x.texto.includes("no se apoya en ningún factor")));
+t("Paso 7: estrategia vaga", a7.some(x => x.estrategia === "s2" && x.texto.includes("muy general")));
+t("Paso 7: elegida a mano sin motivo", a7.some(x => x.estrategia === "s3" && x.texto.includes("sin escribir el motivo")));
+t("Paso 7: todas del mismo tipo", a7.some(x => x.texto.includes("Todas las estrategias elegidas son de «corregir»")));
+t("Paso 7: la debilidad que más pesa sin respuesta", a7.some(x => x.texto.includes("(D1:")));
+t("Paso 7: la amenaza que más pesa sin respuesta", a7.some(x => x.texto.includes("(A1:")));
+t("Paso 7: la orientación no casa", !a7.some(x => x.texto.includes("ninguna de las elegidas es de ese tipo")));
+eq("Elegidas en orden", L.elegidas(av).map(L.codigoEst), ["E1", "E2", "E3"]);
+
+// Semáforo, fuerza y SMART
+eq("Semáforo", [L.semaforo("≥ 80 %", "58"), L.semaforo("≥ 80 %", "80"), L.semaforo("≤ 2", "1,5"), L.semaforo("≤ 2", "6"), L.semaforo("3 de 3", "3"), L.semaforo("10 de 10", "6"), L.semaforo("", "5"), L.semaforo("≥ 80 %", "")], ["no", "ok", "ok", "no", "ok", "no", null, null]);
+eq("Estándar leído", [L.leerEstandar("≥ 80 %"), L.leerEstandar("<5"), L.leerEstandar("95")], [{ op: ">=", valor: 80 }, { op: "<", valor: 5 }, { op: ">=", valor: 95 }]);
+eq("Fuerza de la medida", ["Alerta automática en la historia clínica", "Circuito de aviso de altas", "Sesión de formación al equipo", "Comprar dispensadores"].map(L.fuerzaMedida), ["fuerte", "intermedia", "debil", ""]);
+eq("SMART", [L.smartAuto({ texto: "Que el 80 % de las altas estén conciliadas", meta: "", fecha: "2027-12-31" }), L.smartAuto({ texto: "Mejorar la conciliación", meta: "", fecha: "" })].map(x => [x.medible, x.plazo, x.especifico]), [[true, true, true], [false, false, false]]);
+
+// Avisos del paso 8
+const pl = JSON.parse(JSON.stringify(ej));
+const e1 = pl.estrategias.find(e => e.num === 1);
+e1.objetivo = { texto: "Mejorar la conciliación", meta: "", fecha: "" };
+e1.acciones[0].quien = ""; e1.acciones[0].fin = "2026-01-31"; e1.acciones[0].estado = "curso";
+e1.acciones[1].quien = "el equipo";
+const a8 = L.avisosPlan(pl, "2026-10-22");
+t("Paso 8: objetivo sin cifra", a8.some(x => x.texto.startsWith("E1: el objetivo no tiene ninguna cifra")));
+t("Paso 8: objetivo sin fecha", a8.some(x => x.texto.startsWith("E1: el objetivo no tiene fecha")));
+t("Paso 8: falta responsable", a8.some(x => x.texto.startsWith("E1.1: falta responsable")));
+t("Paso 8: acción vencida", a8.some(x => x.texto.startsWith("E1.1: el plazo terminó el 31/01/2026")));
+t("Paso 8: responsable genérico", a8.some(x => x.texto.startsWith("E1.2: «el equipo»")));
+t("Paso 8: avisos de acción llevan su id", a8.filter(x => x.accion).every(x => e1.acciones.some(y => y.id === x.accion)));
+eq("Paso 8: progreso con objetivo vago y sin responsable", L.progreso(pl)[8], false);
+
+// Nota de calidad
+const nc = L.notaCalidad(ej);
+eq("Nota de calidad del ejemplo", [nc.nota, nc.de, nc.nivel], [10, 10, "verde"]);
+const nv = L.notaCalidad(L.nuevoDafo("v", "t"));
+eq("Nota de calidad de un DAFO vacío", [nv.nota, nv.nivel], [0, "rojo"]);
+
+// Candidatos
+eq("Destino sugerido", [L.sugerirDestino(Object.assign(L.nuevoFactor("c1", "D", 1), { texto: "Cumplimiento de la higiene de manos del 55 %" })), L.sugerirDestino(Object.assign(L.nuevoFactor("c2", "D", 1), { texto: "Errores en la conciliación de la medicación" })), L.sugerirDestino(Object.assign(L.nuevoFactor("c3", "F", 1), { texto: "Conciliación excelente" })), L.sugerirDestino(Object.assign(L.nuevoFactor("c4", "A", 1), { texto: "Jubilaciones" }))], ["auditoria", "amfe", "", ""]);
+eq("Candidatos del ejemplo", L.candidatos(ej).map(f => L.codigo(f) + ":" + f.candidato.destino), ["D2:amfe", "D5:auditoria"]);
+
+// Saneado de estrategias e ids nuevos
+const se = L.sanearDafo(Object.assign(JSON.parse(JSON.stringify(ej)), { estrategias: [{ id: "x1", tipo: "Z", num: 1, texto: "Una", factores: ["ej-fa-D1", "no-existe", "<b>"], acciones: [{ id: "a1", que: "Hacer", estado: "rara", seguimiento: [{ id: "m1", fecha: "2026-01-01", valor: "5" }] }] }, { id: "x2", tipo: "E", num: 1, texto: "Dos" }] }), gid, "t");
+eq("Saneado de estrategias", se.estrategias.map(e => [e.tipo, e.num, e.factores.length]), [["C", 1, 1], ["E", 2, 0]]);
+eq("Saneado de acciones", [se.estrategias[0].acciones[0].estado, se.estrategias[0].acciones[0].seguimiento.length, se.estrategias[0].objetivo.texto], ["pendiente", 1, ""]);
+const rn = L.renovarIds(JSON.parse(JSON.stringify(ej)), gid);
+const idsRn = [rn.id, ...rn.fuentes.map(x => x.id), ...rn.factores.map(f => f.id), ...rn.estrategias.flatMap(e => [e.id, ...e.acciones.flatMap(x => [x.id, ...x.seguimiento.map(m => m.id)])]), ...Object.keys(rn.cruces).join("|").split("|")];
+t("Ids nuevos: ninguno de ejemplo dentro", idsRn.slice(1).every(x => !/^ej-/.test(x)));
+eq("Ids nuevos: cruces, fuentes y factores de las estrategias se conservan", [Object.keys(rn.cruces).length, rn.factores.filter(f => f.fuenteId).length, rn.estrategias.reduce((s, e) => s + e.factores.length, 0)], [100, 20, 23]);
+const rnS = L.sanearDafo(JSON.parse(JSON.stringify(rn)), gid, "t");
+eq("Ids nuevos: tras recargar sigue igual", [Object.keys(rnS.cruces).length, L.resultadoCruces(rnS).orientacion, L.elegidas(rnS).length, L.estrategiasPropuestas(rnS).length], [100, "DO", 6, 0]);
+
+// Ejemplo: estrategias y plan
+eq("Ejemplo: 9 estrategias, 6 elegidas", [ej.estrategias.length, L.elegidas(ej).map(e => L.codigoEst(e) + e.tipo).join(" ")], [9, "E1C E2A E3E E5C E6C E4M"]);
+eq("Ejemplo: sin avisos en los pasos 7 y 8", [7, 8].flatMap(p => L.avisosDe(ej, p, "2026-10-22")).map(a => a.texto), []);
+eq("Ejemplo: progreso completo", Object.values(L.progreso(ej)), [true, true, true, true, true, true, true, true]);
+eq("Ejemplo: semáforo de las líneas de base", L.elegidas(ej).flatMap(e => e.acciones).filter(x => L.ultimaMedida(x)).map(x => L.semaforo(x.indicador.estandar, L.ultimaMedida(x).valor)), ["no", "no", "no", "no"]);
+t("Ejemplo: conclusiones propuestas con las cifras", /recoge 6 fortalezas.*reorientación \(DO\).*Se eligen 6 estrategias \(3 de corregir, 1 de afrontar, 1 de mantener y 1 de explotar\), con 9 acciones/.test(L.conclusionesSugeridas(ej)));
+t("Ejemplo: conclusiones sin «vuestras»", !/vuestr/i.test(L.conclusionesSugeridas(ej) + L.introduccionSugerida(ej)));
+
+// Intercambio completo
+const pq3 = L.paqueteIntercambio([ej], "2026.03", "2026-10-22T10:00:00Z").dafos[0];
+eq("Intercambio: estrategias", [pq3.estrategias.length, pq3.estrategias.filter(e => e.elegida).length, pq3.estrategias[0].codigo, pq3.estrategias[0].bloque], [9, 6, "E1", "DO"]);
+eq("Intercambio: factores de una estrategia por código", pq3.estrategias.find(e => e.codigo === "E2").factores, ["D1", "A1", "A2", "A3"]);
+const ac1 = pq3.estrategias[0].acciones[0];
+eq("Intercambio: acción con fuerza, indicador y último valor", [ac1.fuerza, ac1.indicador.estandar, ac1.ultimo], ["intermedia", "≥ 80 %", { fecha: "2026-09-30", valor: "45", cumple: false }]);
+eq("Intercambio: candidatos", pq3.candidatos.map(c => [c.codigo, c.destino, c.peso]), [["D2", "amfe", 5], ["D5", "auditoria", 4]]);
+
+// Documentos
+const dI = L.documentoInforme(ej, "22/10/2026"), dR = L.documentoResumen(ej, "22/10/2026"), dL = L.documentoLamina(ej, "22/10/2026");
+const h1 = doc => doc.bloques.filter(b => b.t === "h1").map(b => b.texto);
+eq("Informe: apartados", h1(dI), ["Control del documento", "1. Introducción", "2. Metodología", "3. Análisis interno", "4. Análisis externo", "5. Matriz DAFO", "6. Matriz cruzada y orientación estratégica", "7. Estrategias CAME", "8. Plan de acción", "9. Conclusiones", "Anexo I. Factores que merecen un análisis propio", "Anexo II. Escalas"]);
+eq("Resumen: apartados", dR.bloques.filter(b => b.t === "h2").map(b => b.texto), ["La foto: matriz DAFO", "Lo que vamos a hacer", "Conclusión"]);
+eq("Lámina: apaisada", dL.horizontal, true);
+t("Documentos de un DAFO vacío no fallan", [L.documentoInforme, L.documentoResumen, L.documentoLamina].every(f => f(L.sanearDafo({ id: "v", dafos: [] }, gid, "t"), "hoy").bloques.length > 2));
+const W = require("../docx.js");
+const wb = W.construirDocx(Object.assign({ pie: "prueba" }, dI));
+t("Word del informe: se construye (ZIP)", wb.length > 5000 && wb[0] === 0x50 && wb[1] === 0x4b);
+t("Word de la lámina apaisada", W.construirDocx(Object.assign({ pie: "prueba" }, dL)).length > 2000);
 
 // Contenido
 eq("Aprende: 7 temas", C.TEMAS.map(x => x.n), [1, 2, 3, 4, 5, 6, 7]);

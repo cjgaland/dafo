@@ -192,6 +192,41 @@
     filas.forEach((f, i) => cols.forEach((c, j) => { r[`ej-fa-${f}|ej-fa-${c}`] = String(valores[i][j]); }));
     return r;
   };
+  // Estrategias y plan de acción del ejemplo
+  const ind = (nombre, formula, estandar, fuente) => ({ nombre, formula, estandar, fuente });
+  const acc = (id, que, quien, inicio, fin, recursos, como, indicador, estado = "pendiente", seguimiento = []) =>
+    ({ id: "ej-ac-" + id, que, quien, inicio, fin, recursos, como, indicador, estado, nota: "", seguimiento: seguimiento.map((m, i) => ({ id: `ej-me-${id}-${i}`, fecha: m[0], valor: m[1], nota: m[2] || "" })) });
+  const est = (num, tipo, texto, factores, impacto, viabilidad, origen, objetivo, acciones, elegida = "", motivo = "") =>
+    ({ id: "ej-es-" + num, tipo, num, texto, factores: factores.map(c => "ej-fa-" + c), impacto: String(impacto), viabilidad: String(viabilidad), elegida, motivo, origen,
+      objetivo: { texto: objetivo[0], meta: objetivo[1], fecha: objetivo[2] }, acciones });
+  const IND_CONC = ind("% de altas hospitalarias con la medicación conciliada en 7 días", "Altas con conciliación registrada en 7 días / altas hospitalarias × 100", "≥ 80 %", "Historia de salud digital");
+  const ESTRATEGIAS_UGC = [
+    est(1, "C", "Circuito de conciliación de la medicación al alta con la enfermera de enlace del hospital, dentro del plan de acreditación", ["D2", "O5", "O4"], 3, 3, "cruce:DO:ej-fa-D2",
+      ["Que el 80 % de los pacientes dados de alta del hospital tengan la medicación conciliada en 7 días", "≥ 80 %", "2027-12-31"],
+      [acc("1-1", "Circuito de aviso de altas: la enfermera de enlace del hospital envía cada alta a la enfermera gestora de casos", "Coordinación de cuidados", "2027-01-15", "2027-03-31", "Sin coste: tiempo de enfermería", "Listado diario de altas y cita de conciliación en los 7 días siguientes", IND_CONC, "pendiente", [["2026-09-30", "45", "Línea de base (acuerdo 2026)"]]),
+       acc("1-2", "Alerta automática en la historia clínica cuando llega un informe de alta sin conciliar", "Dirección de la UGC con Sistemas de Información del Distrito", "2027-04-01", "2027-09-30", "Desarrollo de Sistemas de Información", "Aviso en la agenda del médico y la enfermera de familia", IND_CONC)]),
+    est(2, "A", "Gestión enfermera de la demanda y plan de verano para bajar la demora ante el envejecimiento, las jubilaciones y la población flotante", ["D1", "A1", "A2", "A3"], 3, 2, "cruce:DA:ej-fa-D1",
+      ["Bajar la demora media para cita con medicina de familia de 6 días a 48 horas", "≤ 2 días", "2027-12-31"],
+      [acc("2-1", "Gestión enfermera de la demanda aguda con protocolos consensuados para los motivos de consulta más frecuentes", "Coordinación de cuidados", "2027-01-15", "2027-04-30", "Formación de 10 h para enfermería", "Protocolos de resfriado, cistitis, quemaduras leves, heridas…", ind("Demora media para cita con medicina de familia (días)", "Media de días entre la petición y la cita", "≤ 2", "Cuadro de mando del Distrito"), "pendiente", [["2026-09-30", "6", "Línea de base"]]),
+       acc("2-2", "Plan de contingencia de verano: agenda reforzada y redistribución de cupos en julio y agosto", "Dirección de la UGC", "2027-03-01", "2027-06-15", "Refuerzo de verano del Distrito", "Agendas de acto único y consultas de enfermería sin cita previa", ind("Demora media en julio y agosto (días)", "Media de días entre la petición y la cita en julio y agosto", "≤ 3", "Cuadro de mando del Distrito"))]),
+    est(3, "E", "Seguimiento por teleconsulta de los pacientes crónicos complejos, liderado por la enfermería gestora de casos y con la consultoría de medicina interna del hospital", ["F3", "O2", "O5"], 3, 2, "cruce:FO:ej-fa-F3",
+      ["Seguir por teleconsulta al menos al 60 % de los 140 pacientes crónicos complejos", "≥ 60 %", "2027-12-31"],
+      [acc("3-1", "Agenda de teleconsulta de enfermería gestora de casos, con 2 horas semanales de consultoría de medicina interna", "Enfermería gestora de casos", "2027-02-01", "2027-06-30", "Herramienta corporativa de teleconsulta", "Llamada o videollamada programada cada trimestre y tras cada ingreso", ind("% de crónicos complejos con al menos una teleconsulta al trimestre", "Crónicos complejos con teleconsulta en el trimestre / crónicos complejos × 100", "≥ 60 %", "Registro de gestión de casos"))]),
+    est(4, "M", "Usar la unidad docente y la estabilidad del equipo como reclamo para cubrir las jubilaciones", ["F6", "F1", "A2"], 2, 2, "cruce:FA:ej-fa-F6",
+      ["Cubrir las tres plazas que quedarán vacantes por jubilación antes de que se produzcan", "3 de 3", "2028-06-30"],
+      [acc("4-1", "Ofrecer contrato de continuidad a los residentes que terminan y presentar la UGC en las jornadas de residentes del Distrito", "Dirección de la UGC y tutores", "2027-01-01", "2027-05-31", "", "", ind("Plazas cubiertas antes de la jubilación", "Plazas cubiertas / plazas que quedan vacantes", "3 de 3", "Recursos Humanos del Distrito"))],
+      "si", "Es la única estrategia que protege a la UGC de las jubilaciones, y la dirección del Distrito la apoya."),
+    est(5, "C", "Plan de mejora de la higiene de manos con el apoyo metodológico de la Agencia", ["D5", "O4"], 2, 3, "cruce:DO:ej-fa-D5",
+      ["Llegar a un cumplimiento de la higiene de manos del 80 % en la observación directa", "≥ 80 %", "2027-12-31"],
+      [acc("5-1", "Soluciones alcohólicas en el punto de atención de todas las consultas y salas de curas", "Responsable de seguridad del paciente de la UGC", "2027-01-15", "2027-02-28", "Dispensadores para 24 puestos", "", ind("Puestos de atención con solución alcohólica", "Puestos con dispensador / puestos de atención × 100", "100 %", "Revisión de consultas")),
+       acc("5-2", "Auditoría trimestral de la higiene de manos con devolución de los resultados al equipo", "Responsable de seguridad del paciente de la UGC", "2027-03-01", "2027-12-31", "", "Observación directa de 120 oportunidades por trimestre", ind("Cumplimiento de la higiene de manos (observación directa)", "Oportunidades con higiene correcta / oportunidades observadas × 100", "≥ 80 %", "Auditoría interna"), "pendiente", [["2026-06-30", "55", "Línea de base"]])]),
+    est(6, "C", "Revisar los cuatro protocolos caducados con la metodología de la Agencia, para la acreditación", ["D3", "O4"], 2, 3, "cruce:DO:ej-fa-D3",
+      ["Tener los diez protocolos de la UGC revisados en los últimos cinco años", "10 de 10", "2027-09-30"],
+      [acc("6-1", "Revisión de los cuatro protocolos caducados por grupos de trabajo, con fecha de próxima revisión", "Comisión de calidad de la UGC", "2027-01-15", "2027-09-30", "Dos sesiones de trabajo por protocolo", "", ind("Protocolos revisados en los últimos 5 años", "Protocolos vigentes revisados / protocolos de la UGC", "10 de 10", "Archivo de protocolos"), "pendiente", [["2026-10-01", "6", "Línea de base"]])]),
+    est(7, "C", "Proyecto de formación en seguridad del paciente, financiado por la estrategia de seguridad", ["D4", "O1"], 2, 2, "cruce:DO:ej-fa-D4", ["", "", ""], []),
+    est(8, "M", "Reforzar la gestión de casos ante el aumento de la cronicidad", ["F3", "A1"], 2, 2, "cruce:FA:ej-fa-F3", ["", "", ""], []),
+    est(9, "C", "Teleconsulta de medicina de familia para descargar la agenda presencial", ["D1", "O2"], 2, 3, "cruce:DO:ej-fa-D1", ["", "", ""], [], "no", "Se incluye en E2 (gestión de la demanda) y en E3 (teleconsulta de crónicos).")
+  ];
   const DAFO_UGC = {
     id: "ej-dafo-ugc", titulo: "DAFO UGC de Atención Primaria 2027", objeto: "UGC de Atención Primaria", tipoObjeto: "ugc", finalidad: "acuerdo",
     horizonte: "1 año (el del acuerdo de gestión 2027), preparando también la acreditación",
@@ -218,10 +253,12 @@
       fac("F", 5, "Buena valoración de los pacientes en la encuesta de satisfacción", "ciudadania", "91 % satisfechos o muy satisfechos", "enc", 2, "", "pacientes"),
       fac("F", 6, "Unidad docente acreditada con residentes de Medicina Familiar y Comunitaria y de Enfermería", "docencia", "4 residentes por año", "mem", 3, "", "equipo"),
       fac("D", 1, "Demora media de 6 días para cita con medicina de familia (objetivo del acuerdo: 48 horas)", "resultados", "Acuerdo de gestión 2026: objetivo no cumplido", "ag", 5),
-      fac("D", 2, "Conciliación de la medicación tras el alta hospitalaria en el 45 % de los casos", "seguridad", "Estándar del acuerdo: 80 %", "ag", 5),
+      Object.assign(fac("D", 2, "Conciliación de la medicación tras el alta hospitalaria en el 45 % de los casos", "seguridad", "Estándar del acuerdo: 80 %", "ag", 5),
+        { candidato: { destino: "amfe", proceso: "Conciliación de la medicación al alta hospitalaria", motivo: "Proceso con riesgo directo para el paciente: conviene saber qué puede fallar en cada paso antes de montar el circuito (E1)." } }),
       fac("D", 3, "Cuatro de los diez protocolos de la UGC llevan más de 5 años sin revisar", "procesos", "Revisión del archivo de protocolos", "mem", 3, "", "equipo"),
       fac("D", 4, "Solo el 30 % del personal ha hecho formación en seguridad del paciente en los últimos 3 años", "personas", "Registro de formación", "cul", 3),
-      fac("D", 5, "Cumplimiento de la higiene de manos del 55 % en la observación directa", "seguridad", "66 de 120 oportunidades observadas", "hm", 4),
+      Object.assign(fac("D", 5, "Cumplimiento de la higiene de manos del 55 % en la observación directa", "seguridad", "66 de 120 oportunidades observadas", "hm", 4),
+        { candidato: { destino: "auditoria", proceso: "Higiene de manos en consultas y salas de curas", motivo: "Práctica que hay que medir cada trimestre con un método fiable (E5)." } }),
       fac("D", 6, "El consultorio de la pedanía no tiene sala de curas separada ni espacio para la toma de muestras", "recursos", "Visita a los consultorios", "", 2, "", "equipo"),
       fac("O", 1, "La estrategia de seguridad del paciente financia proyectos de mejora en Atención Primaria", "politico", "Convocatoria anunciada para 2027", "plan", 3, 4),
       fac("O", 2, "Nueva herramienta corporativa de teleconsulta y telemonitorización disponible en 2027", "tecnologico", "Plan estratégico del Distrito", "plan", 4, 4),
@@ -252,6 +289,11 @@
         [1, 3, 1, 1, 0, /**/ 1, 1, 0, 0, 0],   // D3 protocolos sin revisar
         [1, 2, 0, 3, 0, /**/ 0, 1, 0, 0, 1]    // D4 formación en seguridad
       ]),
+    estrategias: ESTRATEGIAS_UGC,
+    conclusiones: "",
+    proxRevision: "2027-11-15",
+    control: { elaborado: [{ nombre: "", cargo: "Dirección de la UGC" }], revisado: [{ nombre: "", cargo: "Coordinación de cuidados" }], aprobado: [{ nombre: "", cargo: "Dirección de Atención Primaria del Distrito" }],
+      historial: [{ edicion: "00", fecha: "2026-11-15", cambio: "Documento inicial" }] },
     notas: "Ejemplo inventado: la UGC, sus cifras y sus fuentes no corresponden a ningún centro real.",
     creado: "2026-10-22T08:00:00.000Z", modificado: "2026-10-22T08:00:00.000Z"
   };
@@ -264,7 +306,9 @@
       { t: "3 · Dentro", s: "6 fortalezas y 6 debilidades, cada una con su dato", href: "#/dafo/ej-dafo-ugc/3" },
       { t: "4 · Fuera", s: "6 oportunidades y 6 amenazas con importancia y probabilidad", href: "#/dafo/ej-dafo-ugc/4" },
       { t: "5 · Priorizar", s: "Los 5 de más peso de cada cuadrante", href: "#/dafo/ej-dafo-ugc/5" },
-      { t: "6 · Cruzar", s: "Matriz cruzada de 100 casillas: orientación de reorientación (DO)", href: "#/dafo/ej-dafo-ugc/6" }
+      { t: "6 · Cruzar", s: "Matriz cruzada de 100 casillas: orientación de reorientación (DO)", href: "#/dafo/ej-dafo-ugc/6" },
+      { t: "7 · Estrategias CAME", s: "9 estrategias, 6 elegidas por impacto y viabilidad; 2 candidatos a AMFE y auditoría", href: "#/dafo/ej-dafo-ugc/7" },
+      { t: "8 · Plan de acción", s: "Objetivos, 9 acciones con indicador, seguimiento y documentos", href: "#/dafo/ej-dafo-ugc/8" }
     ]
   };
 

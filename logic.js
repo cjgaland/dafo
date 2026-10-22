@@ -60,22 +60,22 @@
   };
   // horizonte propuesto, consejo y fuentes que suelen hacer falta según la finalidad
   const FINALIDADES = {
-    acuerdo: { nom: "Acuerdo de gestión", horizonte: "1 año (el del acuerdo de gestión)",
+    acuerdo: { para: "para preparar el acuerdo de gestión", nom: "Acuerdo de gestión", horizonte: "1 año (el del acuerdo de gestión)",
       consejo: "El DAFO prepara los objetivos del acuerdo: partid de los resultados del acuerdo anterior y terminad con objetivos medibles que puedan entrar en el nuevo.",
       fuentes: ["acuerdo", "indicadores", "encuesta", "memoria", "notificaciones"] },
-    acsa: { nom: "Acreditación ACSA", horizonte: "El ciclo de la certificación (unos 5 años, con seguimiento a los 2–3)",
+    acsa: { para: "para preparar la acreditación ACSA", nom: "Acreditación ACSA", horizonte: "El ciclo de la certificación (unos 5 años, con seguimiento a los 2–3)",
       consejo: "Mirad hacia dentro con los bloques del manual de estándares y usad el informe de la acreditación anterior, si lo hay. Las debilidades suelen ser los estándares que aún no cumplís.",
       fuentes: ["acreditacion", "auditorias", "cultura", "notificaciones", "encuesta"] },
-    estrategico: { nom: "Plan estratégico", horizonte: "3 a 5 años",
+    estrategico: { para: "para elaborar el plan estratégico", nom: "Plan estratégico", horizonte: "3 a 5 años",
       consejo: "Con un horizonte largo pesa más el entorno: dedicad tiempo a las oportunidades y amenazas (demografía, tecnología, planes del sistema sanitario).",
       fuentes: ["plan", "memoria", "indicadores", "encuesta", "normativa"] },
-    proyecto: { nom: "Proyecto o servicio nuevo", horizonte: "Hasta su puesta en marcha y su primer año",
+    proyecto: { para: "para valorar un proyecto o servicio nuevo", nom: "Proyecto o servicio nuevo", horizonte: "Hasta su puesta en marcha y su primer año",
       consejo: "El DAFO de un proyecto dice si es viable y qué riesgos tiene: las fortalezas y debilidades son las de quien lo va a poner en marcha.",
       fuentes: ["memoria", "plan", "indicadores", "otros"] },
-    cambio: { nom: "Tras un cambio importante", horizonte: "1 a 2 años",
+    cambio: { para: "tras un cambio importante en la unidad", nom: "Tras un cambio importante", horizonte: "1 a 2 años",
       consejo: "Fusión, traslado, nueva dirección o un evento adverso grave: el DAFO ayuda a ordenar qué se pierde, qué se gana y qué hay que proteger.",
       fuentes: ["notificaciones", "reclamaciones", "cultura", "memoria"] },
-    otra: { nom: "Otra", horizonte: "", consejo: "Escribid en el título para qué es el análisis: un DAFO sin finalidad clara no lleva a ninguna decisión.", fuentes: ["memoria", "indicadores", "encuesta"] }
+    otra: { para: "", nom: "Otra", horizonte: "", consejo: "Escribid en el título para qué es el análisis: un DAFO sin finalidad clara no lleva a ninguna decisión.", fuentes: ["memoria", "indicadores", "encuesta"] }
   };
   // Horizonte en años que se lee de un texto («2 años», «3 a 5 años»…): el mayor número que va justo antes de «año»
   function aniosHorizonte(t) {
@@ -173,10 +173,16 @@
   // ---------- Modelo ----------
   function nuevoDafo(id, fecha) {
     return { id, titulo: "", objeto: "", tipoObjeto: "", finalidad: "", horizonte: "", mision: "", vision: "", incluye: "", excluye: "",
-      responsable: "", fecha: "", fuentes: [], factores: [], prioridad: { n: 5 }, cruces: {}, notas: "", creado: fecha, modificado: fecha };
+      responsable: "", fecha: "", fuentes: [], factores: [], prioridad: { n: 5 }, cruces: {}, estrategias: [], conclusiones: "", proxRevision: "", control: nuevoControl(), notas: "", creado: fecha, modificado: fecha };
   }
   function nuevaFuente(id) { return { id, tipo: "", nombre: "", fecha: "", nota: "" }; }
-  function nuevoFactor(id, tipo = "F", n = 0) { return { id, tipo, num: n, texto: "", area: "", evidencia: "", fuenteId: "", aporta: "", importancia: "", probabilidad: "", manual: "", motivo: "" }; }
+  function nuevoFactor(id, tipo = "F", n = 0) { return { id, tipo, num: n, texto: "", area: "", evidencia: "", fuenteId: "", aporta: "", importancia: "", probabilidad: "", manual: "", motivo: "", candidato: nuevoCandidato() }; }
+  const nuevoCandidato = () => ({ destino: "", proceso: "", motivo: "" });
+  const nuevoIndicador = () => ({ nombre: "", formula: "", estandar: "", fuente: "" });
+  const nuevoObjetivo = () => ({ texto: "", meta: "", fecha: "" });
+  function nuevaEstrategia(id, tipo = "C", n = 0) { return { id, tipo, num: n, texto: "", factores: [], impacto: "", viabilidad: "", elegida: "", motivo: "", origen: "", objetivo: nuevoObjetivo(), acciones: [] }; }
+  function nuevaAccion(id) { return { id, que: "", quien: "", inicio: "", fin: "", recursos: "", como: "", indicador: nuevoIndicador(), estado: "pendiente", nota: "", seguimiento: [] }; }
+  function nuevaMedida(id) { return { id, fecha: "", valor: "", nota: "" }; }
   const siguienteNum = (d, t) => d.factores.filter(f => f.tipo === t).reduce((m, f) => Math.max(m, Number(f.num) || 0), 0) + 1;
   const fuenteDe = (d, f) => d.fuentes.find(x => x.id === f.fuenteId) || null;
   const nombreFuente = x => x ? (lleno(x.nombre) ? x.nombre : FUENTES_TIPO[x.tipo] ? FUENTES_TIPO[x.tipo].nom : "") : "";
@@ -305,7 +311,7 @@
   }
   const avisosInterno = d => avisosCuadrantes(d, 3);
   const avisosExterno = d => avisosCuadrantes(d, 4);
-  const avisosDe = (d, n) => ({ 1: avisosObjeto, 2: avisosFuentes, 3: avisosInterno, 4: avisosExterno, 5: avisosPriorizar, 6: avisosCruzar }[n] || (() => []))(d);
+  const avisosDe = (d, n, hoy = new Date().toISOString()) => ({ 1: avisosObjeto, 2: avisosFuentes, 3: avisosInterno, 4: avisosExterno, 5: avisosPriorizar, 6: avisosCruzar, 7: avisosEstrategias, 8: avisosPlan }[n] || (() => []))(d, hoy);
 
   // ---------- Resumen y progreso ----------
   function resumen(d) {
@@ -324,7 +330,8 @@
       4: listo("O") && listo("A"),
       5: TIPOS.every(t => prioritarios(d, t).length) && !d.factores.some(f => lleno(f.texto) && f.manual && !lleno(f.motivo)),
       6: (() => { const r = resultadoCruces(d); return r.listo && r.valores.some(v => v > 0); })(),
-      7: false, 8: false
+      7: (() => { const EL = elegidas(d); return EL.length > 0 && EL.every(e => e.factores.length && n3(e.impacto) && n3(e.viabilidad)) && !d.estrategias.some(e => e.elegida && !lleno(e.motivo)); })(),
+      8: (() => { const EL = elegidas(d); return EL.length > 0 && EL.every(e => lleno(e.objetivo.texto) && accionesDe(e).length && accionesDe(e).every(x => lleno(x.quien) && lleno(x.fin) && lleno(x.indicador.nombre))); })()
     };
   }
   // Primer paso disponible sin terminar
@@ -339,7 +346,9 @@
     3: d => d.factores.some(f => esInterno(f.tipo)) ? "Completa las fortalezas y debilidades: cada una con su dato y su importancia." : "Mira hacia dentro: ¿qué hacéis bien (fortalezas) y qué hacéis peor (debilidades)?",
     4: d => d.factores.some(f => !esInterno(f.tipo)) ? "Completa las oportunidades y amenazas: cada una con su importancia y su probabilidad." : "Mira hacia fuera: ¿qué os puede ayudar (oportunidades) y qué os puede perjudicar (amenazas)?",
     5: d => `Quedaos con lo importante: los ${nPrioridad(d)} factores de más peso de cada cuadrante, y decidid a mano los empates.`,
-    6: d => { const r = resultadoCruces(d); return r.rellenas ? `Termina la matriz cruzada: quedan ${r.total - r.rellenas} de ${r.total} casillas por valorar.` : "Cruza los factores prioritarios: ¿qué fortalezas y debilidades pesan ante cada oportunidad y amenaza?"; }
+    6: d => { const r = resultadoCruces(d); return r.rellenas ? `Termina la matriz cruzada: quedan ${r.total - r.rellenas} de ${r.total} casillas por valorar.` : "Cruza los factores prioritarios: ¿qué fortalezas y debilidades pesan ante cada oportunidad y amenaza?"; },
+    7: d => d.estrategias.length ? "Puntúa el impacto y la viabilidad de cada estrategia y elige las que vais a llevar al plan." : "Saca las estrategias CAME de los cruces fuertes: corregir, afrontar, mantener y explotar.",
+    8: d => `Convierte ${elegidas(d).length === 1 ? "la estrategia elegida" : "las " + elegidas(d).length + " estrategias elegidas"} en objetivos y acciones, con responsable, plazo e indicador.`
   };
   function siguientePaso(datos, entrega) {
     const L = datos.dafos;
@@ -347,8 +356,8 @@
     const d = L.slice().sort((x, y) => String(y.modificado).localeCompare(String(x.modificado)))[0];
     const p = pasoPendiente(d, entrega), nom = corto(nombreDafo(d) || "tu DAFO", 50);
     if (p) return { k: "paso" + p.n, texto: `«${nom}»: ${TEXTO_PASO[p.n](d)}`, href: `#/dafo/${d.id}/${p.n}`, btn: `Ir al paso ${p.n}` };
-    const r = resultadoCruces(d);
-    return { k: "listo", texto: `«${nom}» tiene la matriz cruzada completa${r.orientacion ? `: su orientación es ${BLOQUES[r.orientacion].nom.toLowerCase()} (${r.orientacion})` : ""}. Las estrategias CAME y el plan de acción llegan en la próxima versión; mientras, revisa la orientación y los cruces fuertes.`, href: `#/dafo/${d.id}/6`, btn: "Ver la orientación" };
+    const nc = notaCalidad(d);
+    return { k: "listo", texto: `«${nom}» tiene su plan de acción completo (nota de calidad: ${nc.nota} de ${nc.de}). Saca el informe en Word o PDF, y haced el seguimiento de los indicadores.`, href: `#/dafo/${d.id}/8`, btn: "Ver el plan y los documentos" };
   }
 
   // ---------- Paso 5 · Priorizar: los N de más peso por cuadrante ----------
@@ -414,15 +423,19 @@
   const BLOQUES = {
     FO: { k: "FO", fila: "F", col: "O", came: "E", verbo: "Explotar", postura: "ofensiva", nom: "Ofensiva",
       preg: "¿Esta fortaleza nos ayuda a aprovechar esta oportunidad?",
+      informe: "Las fortalezas de la unidad encajan con las oportunidades del entorno: conviene aprovecharlas para crecer (estrategias de explotar).",
       texto: "Vuestras fortalezas encajan con las oportunidades del entorno: es el momento de crecer y aprovecharlas (estrategias de explotar)." },
     FA: { k: "FA", fila: "F", col: "A", came: "M", verbo: "Mantener", postura: "defensiva", nom: "Defensiva",
       preg: "¿Esta fortaleza nos ayuda a hacer frente a esta amenaza?",
+      informe: "Las fortalezas de la unidad son su mejor defensa frente a las amenazas: hay que protegerlas y apoyarse en ellas (estrategias de mantener).",
       texto: "Vuestras fortalezas son la mejor defensa frente a las amenazas: protegedlas y apoyaos en ellas (estrategias de mantener)." },
     DO: { k: "DO", fila: "D", col: "O", came: "C", verbo: "Corregir", postura: "reorientacion", nom: "De reorientación",
       preg: "¿Esta debilidad nos impide aprovechar esta oportunidad?",
+      informe: "El entorno ofrece oportunidades que hoy las debilidades de la unidad no dejan aprovechar: hay que corregirlas para poder hacerlo (estrategias de corregir).",
       texto: "El entorno ofrece oportunidades que hoy vuestras debilidades no dejan aprovechar: corregidlas para poder hacerlo (estrategias de corregir)." },
     DA: { k: "DA", fila: "D", col: "A", came: "A", verbo: "Afrontar", postura: "supervivencia", nom: "De supervivencia",
       preg: "¿Esta debilidad nos hace más vulnerables a esta amenaza?",
+      informe: "Las debilidades de la unidad la dejan expuesta ante las amenazas: lo primero es reducir esa vulnerabilidad (estrategias de afrontar).",
       texto: "Vuestras debilidades os dejan expuestos ante las amenazas: reducid primero esa vulnerabilidad (estrategias de afrontar)." }
   };
   const ORDEN_BLOQUES = ["FO", "FA", "DO", "DA"];
@@ -482,6 +495,359 @@
     return conPaso(6, A);
   }
 
+  // ---------- Paso 7 · Estrategias CAME ----------
+  // Cada estrategia: código E1, E2… (E de «estrategia»; su tipo CAME va aparte, con su nombre, para no confundirla con A1 = amenaza)
+  const CAME = {
+    C: { k: "C", nom: "Corregir", bloque: "DO", sobre: "D", que: "Corregir una debilidad, sobre todo la que impide aprovechar una oportunidad." },
+    A: { k: "A", nom: "Afrontar", bloque: "DA", sobre: "A", que: "Afrontar una amenaza, sobre todo la que os pilla débiles." },
+    M: { k: "M", nom: "Mantener", bloque: "FA", sobre: "F", que: "Mantener y proteger una fortaleza, sobre todo la que os defiende de una amenaza." },
+    E: { k: "E", nom: "Explotar", bloque: "FO", sobre: "O", que: "Explotar una oportunidad apoyándoos en lo que hacéis bien." }
+  };
+  const TIPOS_CAME = ["C", "A", "M", "E"];
+  const CAME_DE_BLOQUE = { FO: "E", FA: "M", DO: "C", DA: "A" };
+  const IMPACTO = ["Poco: mejora algo, pero no cambia los resultados", "Medio: se notará en algún resultado", "Alto: ataca lo que más pesa en la finalidad del análisis"];
+  const VIABILIDAD = ["Difícil: necesita recursos o decisiones que no dependen de la unidad", "Posible con esfuerzo o algún recurso", "Fácil: depende de la unidad y casi no cuesta"];
+  const n3 = v => { const n = num(v); return Number.isInteger(n) && n >= 1 && n <= 3 ? n : null; };
+  // Matriz impacto × viabilidad (la misma lógica que las acciones de Auditorías)
+  const ZONAS_EST = {
+    ya: { nom: "Hazla ya", que: "Mucho impacto y viable: es de lo primero del plan.", orden: 1 },
+    planificar: { nom: "Planifícala", que: "Mucho impacto pero difícil: hay que buscar recursos y plazos.", orden: 2 },
+    pronto: { nom: "Siguiente en la cola", que: "Impacto y viabilidad medios: para cuando avancen las primeras.", orden: 3 },
+    rapida: { nom: "Victoria rápida", que: "Poco impacto pero fácil: puede hacerse sin quitar sitio a las importantes.", orden: 4 },
+    reconsiderar: { nom: "Reconsidérala", que: "Poco impacto y difícil: probablemente no compensa.", orden: 5 }
+  };
+  function zonaEstrategia(e) {
+    const i = n3(e.impacto), v = n3(e.viabilidad);
+    if (!i || !v) return null;
+    if (i + v >= 5) return "ya";
+    if (i === 3 && v === 1) return "planificar";
+    if (i === 2 && v === 2) return "pronto";
+    if (i === 1 && v >= 2) return "rapida";
+    return "reconsiderar";
+  }
+  const AUTO_ELEGIDA = ["ya", "planificar"];
+  const eligeAuto = e => AUTO_ELEGIDA.includes(zonaEstrategia(e));
+  const esElegida = e => e.elegida === "si" || (e.elegida !== "no" && eligeAuto(e));
+  const codigoEst = e => "E" + e.num;
+  const siguienteNumEst = d => d.estrategias.reduce((m, e) => Math.max(m, Number(e.num) || 0), 0) + 1;
+  function ordenarEstrategias(lista) {
+    return lista.map((e, i) => ({ e, i, z: zonaEstrategia(e) })).sort((a, b) => (esElegida(b.e) - esElegida(a.e)) || ((a.z ? ZONAS_EST[a.z].orden : 9) - (b.z ? ZONAS_EST[b.z].orden : 9)) || (n3(b.e.impacto) || 0) - (n3(a.e.impacto) || 0) || a.e.num - b.e.num || a.i - b.i).map(x => x.e);
+  }
+  const elegidas = d => ordenarEstrategias(d.estrategias.filter(e => lleno(e.texto) && esElegida(e)));
+  const factoresDe = (d, e) => e.factores.map(id => d.factores.find(f => f.id === id)).filter(Boolean);
+  const listaY = l => l.length <= 1 ? (l[0] || "") : l.slice(0, -1).join(", ") + " y " + l[l.length - 1];
+  const cita = f => `«${corto(minuscula(f.texto), 70)}» (${codigo(f)})`;
+  // Propuestas: de los cruces fuertes (3) de la matriz, agrupados por el factor interno; si no hay, de los factores prioritarios
+  function estrategiasPropuestas(d) {
+    const r = resultadoCruces(d), P = [];
+    if (r.fuertes.length) {
+      const grupos = new Map();
+      r.fuertes.forEach(x => { const k = x.bloque + "|" + x.fila.id; if (!grupos.has(k)) grupos.set(k, { bloque: x.bloque, fila: x.fila, cols: [] }); grupos.get(k).cols.push(x.col); });
+      grupos.forEach(g => {
+        const f = g.fila, c = listaY(g.cols.map(cita));
+        const texto = { FO: `Usar ${cita(f)} para aprovechar ${c}`, FA: `Apoyarse en ${cita(f)} para hacer frente a ${c}`, DO: `Aprovechar ${c} para corregir ${cita(f)}`, DA: `Reducir ${cita(f)} para que ${c} nos afecte${g.cols.length > 1 ? "n" : ""} menos` }[g.bloque];
+        P.push({ tipo: CAME_DE_BLOQUE[g.bloque], texto, factores: [f.id, ...g.cols.map(x => x.id)], origen: "cruce:" + g.bloque + ":" + f.id });
+      });
+    } else {
+      const sobre = { D: "C", A: "A", F: "M", O: "E" }, verbo = { C: "Corregir", A: "Afrontar", M: "Mantener", E: "Explotar" };
+      TIPOS.forEach(t => prioritarios(d, t).forEach(f => P.push({ tipo: sobre[t], texto: `${verbo[sobre[t]]} ${cita(f)}`, factores: [f.id], origen: "factor:" + f.id })));
+    }
+    // Las que ya se propusieron antes no se repiten
+    const ya = new Set(d.estrategias.map(e => e.origen).filter(Boolean));
+    return P.filter(p => !ya.has(p.origen));
+  }
+  function avisosEstrategias(d) {
+    const A = [], L_ = d.estrategias, conTexto = L_.filter(e => lleno(e.texto)), EL = elegidas(d);
+    if (!L_.length) { A.push({ nivel: "nota", texto: "Aún no hay estrategias. Pulsa «Proponer estrategias»: la app las saca de los cruces fuertes del paso 6 (o, si no hiciste la matriz cruzada, de los factores prioritarios)." }); return conPaso(7, A); }
+    L_.forEach(e => {
+      const c = codigoEst(e), base = { estrategia: e.id };
+      if (!lleno(e.texto)) { A.push(Object.assign({ nivel: "warn", texto: `${c}: escribe la estrategia.` }, base)); return; }
+      const s = normal(e.texto);
+      if (s.split(" ").length < 4 || /^(mejorar|aumentar|potenciar|fomentar) (la |el )?(calidad|atencion|comunicacion|coordinacion|seguridad)$/.test(s)) A.push(Object.assign({ nivel: "nota", texto: `${c}: es muy general. ¿Qué se va a hacer exactamente, y con qué?` }, base));
+      const F = factoresDe(d, e);
+      if (!F.length) A.push(Object.assign({ nivel: "warn", texto: `${c}: no se apoya en ningún factor del análisis. ¿De dónde sale? Marca los factores que la justifican.` }, base));
+      else if (!F.some(f => f.tipo === CAME[e.tipo].sobre)) A.push(Object.assign({ nivel: "nota", texto: `${c}: una estrategia de «${CAME[e.tipo].nom.toLowerCase()}» suele apoyarse en ${CUADRANTES[CAME[e.tipo].sobre].art} ${CUADRANTES[CAME[e.tipo].sobre].uno}, y esta no cita ninguna. ¿Es de otro tipo?` }, base));
+      if (!n3(e.impacto) || !n3(e.viabilidad)) A.push(Object.assign({ nivel: "nota", texto: `${c}: puntúa su impacto y su viabilidad para saber si conviene elegirla.` }, base));
+      if (e.elegida && !lleno(e.motivo)) A.push(Object.assign({ nivel: "warn", texto: `${c}: la has ${e.elegida === "si" ? "elegido" : "descartado"} a mano sin escribir el motivo.` }, base));
+      if (esElegida(e) && n3(e.viabilidad) === 1 && !lleno(e.motivo)) A.push(Object.assign({ nivel: "nota", texto: `${c}: es difícil de hacer (viabilidad 1). Si la mantenéis, apuntad de dónde saldrán los recursos.` }, base));
+    });
+    if (conTexto.length && !EL.length) A.push({ nivel: "warn", texto: "Ninguna estrategia está elegida. Puntúa impacto y viabilidad, o elige a mano las que vais a llevar al plan." });
+    if (EL.length > 8) A.push({ nivel: "nota", texto: `Hay ${EL.length} estrategias elegidas. Un plan con tantas no se cumple: quedaos con 6 u 8 como mucho.` });
+    if (EL.length >= 3 && new Set(EL.map(e => e.tipo)).size === 1) A.push({ nivel: "nota", texto: `Todas las estrategias elegidas son de «${CAME[EL[0].tipo].nom.toLowerCase()}». ¿No hay nada que ${EL[0].tipo === "E" ? "corregir o mantener" : "explotar o mantener"}?` });
+    // Lo que más pesa tiene que tener alguna estrategia
+    ["D", "A"].forEach(t => {
+      const top = delTipo(d, t).filter(f => lleno(f.texto) && peso(f))[0];
+      if (top && EL.length && !EL.some(e => e.factores.includes(top.id))) A.push({ nivel: "warn", texto: `${CUADRANTES[t].art === "una" ? "La" : "El"} ${CUADRANTES[t].uno} de más peso (${codigo(top)}: «${corto(top.texto, 60)}») no tiene ninguna estrategia elegida. ¿La dejáis sin respuesta a propósito?` });
+    });
+    const r = resultadoCruces(d);
+    if (r.orientacion && EL.length >= 3) {
+      const cuenta = {}; EL.forEach(e => { cuenta[e.tipo] = (cuenta[e.tipo] || 0) + 1; });
+      const dom = Object.keys(cuenta).sort((a, b) => cuenta[b] - cuenta[a])[0], esperado = CAME_DE_BLOQUE[r.orientacion];
+      if (cuenta[esperado] === undefined) A.push({ nivel: "nota", texto: `La matriz cruzada sugiere una postura ${BLOQUES[r.orientacion].nom.toLowerCase()} (estrategias de ${CAME[esperado].nom.toLowerCase()}), y ninguna de las elegidas es de ese tipo. Puede estar bien, pero revisadlo.` });
+      else if (dom !== esperado && cuenta[dom] > cuenta[esperado] + 1) A.push({ nivel: "nota", texto: `La matriz cruzada sugiere sobre todo ${CAME[esperado].nom.toLowerCase()}, y la mayoría de las elegidas son de ${CAME[dom].nom.toLowerCase()}. Solo es un aviso: la orientación es una ayuda, no una orden.` });
+    }
+    return conPaso(7, A);
+  }
+
+  // ---------- Candidatos para otras apps (AMFE, Mapa de Riesgos, Auditorías) ----------
+  const DESTINOS = {
+    amfe: { nom: "AMFE", que: "Un proceso concreto con riesgo para el paciente: analizar paso a paso qué puede fallar.", url: URL_AMFE },
+    mapa: { nom: "Mapa de Riesgos", que: "Un proceso completo que hay que ver de principio a fin, con su flujograma.", url: URL_AUD },
+    auditoria: { nom: "Auditoría", que: "Una práctica que hay que medir: si se cumple y en qué medida.", url: URL_AUD }
+  };
+  const RE_AUDITAR = /higiene de manos|registr|cumpliment|cumplimiento|adherencia|identificacion del paciente|consentimiento|caducad/;
+  const RE_PROCESO = /conciliacion|medicacion|transfusion|alta|ingreso|derivacion|triaje|cirugia|quirofan|identificacion|caidas|ulceras|lesiones por presion|extraccion|muestras|vacuna|urgencias|traslado/;
+  function sugerirDestino(f) {
+    if (!["D", "A"].includes(f.tipo)) return "";
+    const s = normal(f.texto + " " + f.evidencia);
+    if (RE_AUDITAR.test(s)) return "auditoria";
+    if (RE_PROCESO.test(s) || (f.tipo === "D" && f.area === "seguridad")) return "amfe";
+    return "";
+  }
+  const candidatos = d => d.factores.filter(f => lleno(f.texto) && f.candidato && f.candidato.destino);
+
+  // ---------- Paso 8 · Plan de acción y seguimiento ----------
+  const ESTADOS = { pendiente: "Pendiente", curso: "En curso", hecha: "Hecha", verificada: "Verificada" };
+  const FUERZAS = {
+    fuerte: { nom: "Medida fuerte", que: "Cambia el sistema: obliga, automatiza o elimina el paso que falla." },
+    intermedia: { nom: "Medida intermedia", que: "Apoya la práctica: listas de verificación, circuitos, protocolos, auditorías." },
+    debil: { nom: "Medida débil", que: "Depende de la memoria o la voluntad: formación, avisos, sensibilización." }
+  };
+  // Igual que AMFE y Auditorías (palabras clave; ojo con los falsos positivos)
+  function fuerzaMedida(texto) {
+    const t = sinTildes(texto);
+    if (!t) return "";
+    if (/campo obligatori|no permit|\bbloque(e|ar|a)\b|forzad|automat|alerta autom|alerta en la historia|integracion|interoperab|redisen|eliminar|simplific|en tiempo real|sistema de alerta|checklist (digital )?obligatori|canal directo|agenda de acto unico/.test(t)) return "fuerte";
+    if (/checklist|lista de verificacion|listado de control|doble (verificacion|validacion|identificacion|chequeo|revision)|protocolo|procedimiento|estandariz|auditori|revision (cruzada|semanal|periodica|sistematica)|recordatorio visual|circuito|reunion|etiquetado|designacion|cuestionario|plan de contingencia|agenda/.test(t)) return "intermedia";
+    if (/formacion|\bformar\b|sesion|sensibiliz|concienci|charla|informar|difundir|recordar|insistir|cartel|curso/.test(t)) return "debil";
+    return "";
+  }
+  const vencida = (x, hoy) => /^\d{4}-\d{2}-\d{2}$/.test(x.fin || "") && x.fin < String(hoy).slice(0, 10) && (x.estado === "pendiente" || x.estado === "curso");
+  // Estándar «≥ 80 %», «≤ 2», «10 de 10»… → { op, valor }
+  function leerEstandar(t) {
+    const s = String(t || "").replace(",", ".").replace(/\s/g, "");
+    let m = s.match(/^(\d+(?:\.\d+)?)de\d+/i); if (m) return { op: ">=", valor: Number(m[1]) };
+    m = s.match(/^(≥|>=|>|≤|<=|<|=)?(\d+(?:\.\d+)?)/); if (!m) return null;
+    const op = { "≥": ">=", "≤": "<=" }[m[1]] || m[1] || ">=";
+    return { op, valor: Number(m[2]) };
+  }
+  // Semáforo de un valor frente a su estándar: "ok", "no" o null (sin datos)
+  function semaforo(estandar, valor) {
+    const e = leerEstandar(estandar), v = num(String(valor || "").replace(/\s*%/, "").replace(/\s*de\s*\d+$/i, ""));
+    if (!e || !Number.isFinite(v)) return null;
+    const ok = { ">=": v >= e.valor, ">": v > e.valor, "<=": v <= e.valor, "<": v < e.valor, "=": v === e.valor }[e.op];
+    return ok ? "ok" : "no";
+  }
+  const ultimaMedida = x => x.seguimiento.filter(m => lleno(m.valor)).slice().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))).pop() || null;
+  // Comprobación SMART orientativa de un objetivo (la decisión es del equipo; esto solo avisa)
+  function smartAuto(o) {
+    const t = normal(o.texto + " " + o.meta);
+    return { medible: /\d/.test(o.texto + o.meta), plazo: /^\d{4}-\d{2}-\d{2}$/.test(o.fecha || "") || /\b20\d\d\b|\bmes|\bano|\bsemestre|\btrimestre/.test(t), especifico: palabrasDe(o.texto).size >= 3 };
+  }
+  const accionesDe = e => e.acciones.filter(x => lleno(x.que));
+  function avisosPlan(d, hoy) {
+    const A = [], EL = elegidas(d);
+    if (!EL.length) { A.push({ nivel: "nota", texto: "Elige primero las estrategias (paso 7): el plan de acción se hace para las elegidas." }); return conPaso(8, A); }
+    EL.forEach(e => {
+      const c = codigoEst(e), base = { estrategia: e.id }, o = e.objetivo, sm = smartAuto(o);
+      if (!lleno(o.texto)) A.push(Object.assign({ nivel: "warn", texto: `${c}: escribe su objetivo: qué queréis conseguir y cuánto.` }, base));
+      else {
+        if (!sm.medible) A.push(Object.assign({ nivel: "nota", texto: `${c}: el objetivo no tiene ninguna cifra. Sin ella, ¿cómo sabréis si se ha cumplido?` }, base));
+        if (!sm.plazo) A.push(Object.assign({ nivel: "nota", texto: `${c}: el objetivo no tiene fecha. Un objetivo sin plazo se queda en deseo.` }, base));
+      }
+      const AC = accionesDe(e);
+      if (!AC.length) A.push(Object.assign({ nivel: "warn", texto: `${c}: no tiene ninguna acción. ¿Qué se va a hacer, quién y cuándo?` }, base));
+      AC.forEach((x, i) => {
+        const n = `${c}.${i + 1}`, b2 = Object.assign({ accion: x.id }, base);
+        const falta = [!lleno(x.quien) && "responsable", !lleno(x.fin) && "fecha de fin", !lleno(x.indicador.nombre) && "indicador"].filter(Boolean);
+        if (falta.length) A.push(Object.assign({ nivel: "warn", texto: `${n}: falta ${listaY(falta)}. Sin ${falta.length === 1 ? "eso" : "ellos"} no se puede hacer el seguimiento.` }, b2));
+        if (lleno(x.indicador.nombre) && !lleno(x.indicador.estandar)) A.push(Object.assign({ nivel: "nota", texto: `${n}: el indicador no tiene estándar. ¿Qué valor consideraréis bueno (por ejemplo, ≥ 80 %)?` }, b2));
+        if (/^(todos|todo el equipo|el servicio|la unidad|el equipo)$/.test(normal(x.quien))) A.push(Object.assign({ nivel: "nota", texto: `${n}: «${x.quien}» como responsable es lo mismo que nadie. Poned un cargo o una persona concreta.` }, b2));
+        if (vencida(x, hoy)) A.push(Object.assign({ nivel: "warn", texto: `${n}: el plazo terminó el ${x.fin.split("-").reverse().join("/")} y sigue ${ESTADOS[x.estado].toLowerCase()}.` }, b2));
+      });
+    });
+    const todas = EL.flatMap(accionesDe), fz = todas.map(x => fuerzaMedida(x.que));
+    if (todas.length >= 3 && fz.every(z => z === "debil")) A.push({ nivel: "warn", texto: "Todas las acciones son de formación, avisos o sensibilización: medidas débiles, que dependen de la memoria y la buena voluntad. Añadid alguna que cambie el sistema (un circuito, una alerta, una agenda distinta)." });
+    else if (todas.length >= 4 && !fz.includes("fuerte") && !fz.includes("intermedia")) A.push({ nivel: "nota", texto: "Ninguna acción cambia el sistema ni la forma de trabajar. Si es posible, combinadlas con alguna medida intermedia o fuerte." });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.proxRevision || "")) A.push({ nivel: "nota", texto: "Pon la fecha de la próxima revisión del DAFO: lo habitual es cada año, con el nuevo acuerdo de gestión." });
+    return conPaso(8, A);
+  }
+
+  // ---------- Nota de calidad del análisis (mejora M) ----------
+  function notaCalidad(d) {
+    const r = resumen(d), rc = resultadoCruces(d), EL = elegidas(d), m = prioridad(d);
+    const fuentesPac = d.fuentes.some(x => ["encuesta", "reclamaciones"].includes(x.tipo));
+    const topCubiertos = ["D", "A"].every(t => { const top = delTipo(d, t).filter(f => lleno(f.texto) && peso(f))[0]; return !top || EL.some(e => e.factores.includes(top.id)); });
+    const objOk = EL.length && EL.every(e => { const s = smartAuto(e.objetivo); return lleno(e.objetivo.texto) && s.medible && s.plazo; });
+    const acOk = EL.length && EL.every(e => accionesDe(e).length && accionesDe(e).every(x => lleno(x.quien) && lleno(x.fin) && lleno(x.indicador.nombre)));
+    const C_ = [
+      { ok: lleno(d.objeto) && lleno(d.finalidad) && lleno(d.horizonte), texto: "Objeto, finalidad y horizonte claros", consejo: "Completa el paso 1.", paso: 1 },
+      { ok: r.fuentes >= 3 && fuentesPac, texto: "Tres fuentes de datos o más, con la voz de los pacientes", consejo: "Añade fuentes en el paso 2 (encuesta de satisfacción, reclamaciones…).", paso: 2 },
+      { ok: TIPOS.every(t => r[t] >= 3), texto: "Al menos tres factores en cada cuadrante", consejo: "Revisa los cuadrantes con menos factores (pasos 3 y 4).", paso: 3 },
+      { ok: r.n > 0 && r.conEvidencia / r.n >= 0.7, texto: "La mayoría de los factores (70 % o más) con un dato que los respalde", consejo: "Anota la cifra o la fuente de cada factor.", paso: 3 },
+      { ok: progreso(d)[5], texto: "Priorización hecha, con motivo en las decisiones a mano", consejo: "Termina el paso 5.", paso: 5 },
+      { ok: rc.listo, texto: "Matriz cruzada completa", consejo: "Valora todas las casillas del paso 6.", paso: 6 },
+      { ok: EL.length > 0 && new Set(EL.map(e => e.tipo)).size >= 2 && EL.every(e => e.factores.length), texto: "Estrategias elegidas de más de un tipo y apoyadas en factores", consejo: "Revisa el paso 7.", paso: 7 },
+      { ok: EL.length > 0 && topCubiertos, texto: "La debilidad y la amenaza de más peso tienen respuesta", consejo: "Añade o elige una estrategia para ellas (paso 7).", paso: 7 },
+      { ok: !!objOk, texto: "Objetivos con cifra y fecha", consejo: "Completa los objetivos del paso 8.", paso: 8 },
+      { ok: !!acOk, texto: "Acciones con responsable, fecha e indicador", consejo: "Completa las acciones del paso 8.", paso: 8 }
+    ];
+    const nota = C_.filter(c => c.ok).length;
+    return { nota, de: C_.length, nivel: nota >= 9 ? "verde" : nota >= 6 ? "ambar" : "rojo", comprobaciones: C_,
+      texto: nota >= 9 ? "Listo para presentar." : nota >= 6 ? "Va bien, pero conviene completar lo que falta antes de presentarlo." : "Todavía es un borrador: faltan piezas importantes." };
+  }
+
+  // ---------- Textos propuestos del cierre ----------
+  function conclusionesSugeridas(d) {
+    const r = resumen(d), rc = resultadoCruces(d), EL = elegidas(d), nom = nombreDafo(d) || "la unidad";
+    if (!r.n) return "";
+    const top = t => { const f = delTipo(d, t).filter(x => lleno(x.texto) && peso(x))[0]; return f ? `«${minuscula(f.texto)}»` : ""; };
+    const partes = [`El análisis DAFO de ${articulo(d)}${FINALIDADES[d.finalidad] && FINALIDADES[d.finalidad].para ? ", hecho " + FINALIDADES[d.finalidad].para + "," : ""} recoge ${r.F} fortalezas, ${r.D} debilidades, ${r.O} oportunidades y ${r.A} amenazas, ${r.conEvidencia} de ellas con un dato que las respalda.`];
+    const td = top("D"), ta = top("A"), tf = top("F"), to = top("O");
+    if (td || ta) partes.push(`Lo que más pesa en contra es ${[td, ta].filter(Boolean).join(" y ")}; a favor, ${[tf, to].filter(Boolean).join(" y ") || "—"}.`);
+    if (rc.orientacion) partes.push(`La matriz cruzada da una orientación ${BLOQUES[rc.orientacion].nom.toLowerCase()} (${rc.orientacion}): ${minuscula(BLOQUES[rc.orientacion].informe)}.`);
+    if (EL.length) {
+      const cuenta = TIPOS_CAME.map(k => [k, EL.filter(e => e.tipo === k).length]).filter(x => x[1]).map(([k, n]) => `${n} de ${CAME[k].nom.toLowerCase()}`);
+      const nAc = EL.reduce((s, e) => s + accionesDe(e).length, 0), completas = nAc && EL.every(e => accionesDe(e).every(x => lleno(x.quien) && lleno(x.fin) && lleno(x.indicador.nombre)));
+      partes.push(`Se eligen ${plural(EL.length, "estrategia", "estrategias")} (${listaY(cuenta)})${nAc ? `, con ${plural(nAc, "acción", "acciones")} en el plan${completas ? ", cada una con su responsable, su plazo y su indicador" : ""}` : ""}.`);
+    }
+    const cand = candidatos(d);
+    if (cand.length) partes.push(`Además, ${cand.length === 1 ? "un factor merece" : cand.length + " factores merecen"} un análisis propio: ${cand.map(f => `${codigo(f)} (${DESTINOS[f.candidato.destino].nom})`).join(", ")}.`);
+    partes.push("El DAFO se revisará cada año, con el nuevo acuerdo de gestión o antes si cambia algo importante.");
+    return partes.join(" ");
+  }
+  function introduccionSugerida(d) {
+    if (!lleno(d.objeto)) return "";
+    const fin = FINALIDADES[d.finalidad];
+    return `Este documento recoge el análisis DAFO (debilidades, amenazas, fortalezas y oportunidades) de ${articulo(d)}${fin && fin.para ? " " + fin.para : ""}${lleno(d.horizonte) ? `, con un horizonte de ${minuscula(d.horizonte)}` : ""}, y las estrategias CAME (corregir, afrontar, mantener y explotar) y el plan de acción que se derivan de él.`;
+  }
+  // Control del documento
+  const nuevaPersona = () => ({ nombre: "", cargo: "" });
+  const nuevoControl = () => ({ elaborado: [nuevaPersona()], revisado: [nuevaPersona()], aprobado: [nuevaPersona()], historial: [{ edicion: "00", fecha: "", cambio: "Documento inicial" }] });
+
+  // ---------- Ids nuevos para todo lo de dentro (copiar un ejemplo, importar…) ----------
+  // Conserva las referencias: la fuente de cada factor, los cruces y los factores de cada estrategia.
+  function renovarIds(d, genId) {
+    const mapa = {};
+    d.fuentes.forEach(x => { mapa[x.id] = genId(); x.id = mapa[x.id]; });
+    d.factores.forEach(f => { const n = genId(); mapa[f.id] = n; f.id = n; f.fuenteId = mapa[f.fuenteId] || ""; });
+    const cr = {}; Object.keys(d.cruces).forEach(k => { const [a, b] = k.split("|"); if (mapa[a] && mapa[b]) cr[mapa[a] + "|" + mapa[b]] = d.cruces[k]; }); d.cruces = cr;
+    d.estrategias.forEach(e => {
+      e.id = genId(); e.factores = e.factores.map(id => mapa[id]).filter(Boolean);
+      if (/^(cruce:..:|factor:)/.test(e.origen)) e.origen = e.origen.replace(/[^:]+$/, x => mapa[x] || x);
+      e.acciones.forEach(x => { x.id = genId(); x.seguimiento.forEach(m => { m.id = genId(); }); });
+    });
+    return d;
+  }
+
+  // ---------- Documentos (bloques que docx.js convierte en Word y app.js en HTML para imprimir/PDF) ----------
+  // Bloques: {t:"portada"}, {t:"h1"|"h2", texto}, {t:"p", texto|runs, estilo}, {t:"lista", items}, {t:"tabla", cab, filas, anchos, fuente, sinCab}, {t:"salto"}
+  const FONDO_Q = { F: "DCFCE7", D: "FEF3C7", O: "DBEAFE", A: "FFE4E6" }, TINTA_Q = { F: "15803D", D: "B45309", O: "1D4ED8", A: "BE123C" };
+  const FONDO_CRUCE = ["FFFFFF", "EDE9FE", "C4B5FD", "8B5CF6"];
+  const C_ = t => ({ texto: t == null ? "" : String(t), centro: true });
+  const fmtF = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "") ? s.split("-").reverse().join("/") : (s || "");
+  function bloquesControl(control) {
+    const filas = [];
+    [["Elaborado", control.elaborado], ["Revisado", control.revisado], ["Aprobado", control.aprobado]].forEach(([k, ps]) => {
+      const v = ps.filter(x => lleno(x.nombre) || lleno(x.cargo));
+      (v.length ? v : [nuevaPersona()]).forEach((x, i) => filas.push([{ texto: i === 0 ? k : "", negrita: true, fondo: "F5F0FF" }, x.nombre || " ", x.cargo || " "]));
+    });
+    return [{ t: "tabla", cab: ["", "Nombre", "Cargo"], filas, anchos: [18, 41, 41] }, { t: "h2", texto: "Histórico de revisiones" },
+      { t: "tabla", cab: ["Edición", "Fecha", "Cambio"], filas: control.historial.filter(h => lleno(h.edicion) || lleno(h.cambio)).map(h => [h.edicion, fmtF(h.fecha), h.cambio]), anchos: [14, 22, 64] }];
+  }
+  // La matriz DAFO como tabla de 2 × 2 (solo los prioritarios)
+  function bloqueMatrizDafo(d, fuente = 9) {
+    const celda = t => ({ texto: prioritarios(d, t).map(f => `${codigo(f)} · ${f.texto}`).join("\n") || "—", fondo: FONDO_Q[t] });
+    const cab = t => ({ texto: CUADRANTES[t].nom, negrita: true, centro: true, fondo: FONDO_Q[t] });
+    return { t: "tabla", fuente, sinCab: true, anchos: [14, 43, 43], filas: [
+      [{ texto: "" }, { texto: "A favor", negrita: true, centro: true }, { texto: "En contra", negrita: true, centro: true }],
+      [{ texto: "Interno", negrita: true, centro: true }, cab("F"), cab("D")], [{ texto: "" }, celda("F"), celda("D")],
+      [{ texto: "Externo", negrita: true, centro: true }, cab("O"), cab("A")], [{ texto: "" }, celda("O"), celda("A")]] };
+  }
+  function bloqueCruce(d, r) {
+    const filas = [...r.ejes.F, ...r.ejes.D], cols = [...r.ejes.O, ...r.ejes.A];
+    const n = cols.length, ancho = Math.min(7, 86 / Math.max(n, 1));
+    return { t: "tabla", fuente: 8, cab: ["", ...cols.map(codigo)], anchos: [100 - ancho * n, ...Array(n).fill(ancho)],
+      filas: filas.map(f => [{ texto: codigo(f), negrita: true, fondo: FONDO_Q[f.tipo] }, ...cols.map(g => { const v = valorCruce(d, f, g); return { texto: v === null ? "" : String(v), centro: true, negrita: v === 3, fondo: v === null ? "F1F5F9" : FONDO_CRUCE[v] }; })]) };
+  }
+  const tablaFactores = (d, t) => {
+    const l = delTipo(d, t).filter(f => lleno(f.texto)), ext = !esInterno(t), m = prioridad(d);
+    return { t: "tabla", fuente: 8, cab: ["Cód.", "Factor", "Dato que lo respalda", ext ? "I × P" : "Imp.", "Prior."], anchos: [7, 44, 33, 8, 8],
+      filas: l.map(f => { const fu = fuenteDe(d, f); return [{ texto: codigo(f), negrita: true, fondo: FONDO_Q[t] }, { texto: f.texto + (m[f.id].por === "manual" ? `\n(${m[f.id].prio ? "añadido" : "quitado"} a mano: ${f.motivo})` : ""), negrita: m[f.id].prio }, [f.evidencia, fu ? nombreFuente(fu) : ""].filter(lleno).join("\n"), C_(ext ? (peso(f) ? `${f.importancia} × ${f.probabilidad} = ${peso(f)}` : "") : f.importancia), C_(m[f.id].prio ? "Sí" : "No")]; }) };
+  };
+  const textoAccion = x => [x.que, lleno(x.como) ? "Cómo: " + x.como : "", lleno(x.recursos) ? "Recursos: " + x.recursos : ""].filter(lleno).join("\n");
+  const textoIndicador = i => [i.nombre, lleno(i.estandar) ? "Estándar: " + i.estandar : "", lleno(i.formula) ? i.formula : ""].filter(lleno).join("\n");
+  function documentoInforme(d, fecha) {
+    const B = [], r = resumen(d), rc = resultadoCruces(d), EL = elegidas(d), fin = FINALIDADES[d.finalidad], nom = d.objeto || nombreDafo(d) || "Sin nombre";
+    B.push({ t: "portada", titulo: "Análisis DAFO y estrategias CAME", sub: nom, extra: [fin ? fin.nom : "", d.fecha || fecha, lleno(d.responsable) ? "Responsable: " + d.responsable : ""].filter(lleno) });
+    B.push({ t: "h1", texto: "Control del documento" }, ...bloquesControl(d.control), { t: "salto" });
+    B.push({ t: "h1", texto: "1. Introducción" }, { t: "p", texto: introduccionSugerida(d) || "Análisis DAFO y CAME." });
+    const ficha = [["Qué se analiza", nom], ["Tipo", TIPOS_OBJETO[d.tipoObjeto]], ["Finalidad", fin ? fin.nom : ""], ["Horizonte", d.horizonte], ["Misión", d.mision], ["Visión", d.vision], ["Qué queda dentro", d.incluye], ["Qué queda fuera", d.excluye]].filter(x => lleno(x[1]));
+    B.push({ t: "tabla", sinCab: true, anchos: [26, 74], filas: ficha.map(([k, v]) => [{ texto: k, negrita: true, fondo: "F5F0FF" }, v]) });
+    B.push({ t: "h1", texto: "2. Metodología" }, { t: "p", texto: `Se revisaron por separado el análisis interno (fortalezas y debilidades, lo que depende de la unidad) y el externo (oportunidades y amenazas, lo que viene del entorno, con el método PESTEL adaptado a sanidad). Cada factor se apoyó en un dato y se puntuó su importancia de 1 a 5; en los externos, también su probabilidad, y su peso es importancia × probabilidad. Se consideraron prioritarios los ${nPrioridad(d)} de más peso de cada cuadrante, con las correcciones del equipo que se indican. Después se cruzaron los factores prioritarios (de 0 a 3) para encontrar las estrategias CAME, que se eligieron por su impacto y su viabilidad.` });
+    if (d.fuentes.length) B.push({ t: "h2", texto: "2.1. Fuentes de información" }, { t: "tabla", fuente: 8, cab: ["Nº", "Fuente", "Fecha", "Qué dice"], anchos: [6, 40, 14, 40], filas: d.fuentes.map((x, i) => [C_(i + 1), { texto: nombreFuente(x), negrita: true }, C_(x.fecha), x.nota]) });
+    B.push({ t: "h1", texto: "3. Análisis interno" }, { t: "h2", texto: "3.1. Fortalezas" }, tablaFactores(d, "F"), { t: "h2", texto: "3.2. Debilidades" }, tablaFactores(d, "D"));
+    B.push({ t: "h1", texto: "4. Análisis externo" }, { t: "h2", texto: "4.1. Oportunidades" }, tablaFactores(d, "O"), { t: "h2", texto: "4.2. Amenazas" }, tablaFactores(d, "A"));
+    B.push({ t: "h1", texto: "5. Matriz DAFO" }, { t: "p", texto: `Factores prioritarios de cada cuadrante (${r.F + r.D + r.O + r.A} factores en total; ${TIPOS.reduce((s, t) => s + prioritarios(d, t).length, 0)} prioritarios).` }, bloqueMatrizDafo(d));
+    if (rc.total) {
+      B.push({ t: "h1", texto: "6. Matriz cruzada y orientación estratégica" }, { t: "p", texto: "Cada casilla responde, de 0 (sin relación) a 3 (fuerte), a una pregunta: FO, ¿esta fortaleza ayuda a aprovechar esta oportunidad?; FA, ¿ayuda a hacer frente a esta amenaza?; DO, ¿esta debilidad impide aprovechar esta oportunidad?; DA, ¿nos hace más vulnerables a esta amenaza?" }, bloqueCruce(d, rc));
+      B.push({ t: "tabla", fuente: 8, cab: ["Bloque", "Estrategia", "Postura", "Media (0–3)"], anchos: [14, 26, 34, 26], filas: ORDEN_BLOQUES.map(k => [{ texto: k, negrita: true }, BLOQUES[k].verbo, BLOQUES[k].nom, { texto: String(rc.bloques[k].media).replace(".", ","), centro: true, negrita: k === rc.orientacion, fondo: k === rc.orientacion ? "EDE9FE" : "" }]) });
+      B.push({ t: "p", texto: rc.orientacion ? `Orientación ${BLOQUES[rc.orientacion].nom.toLowerCase()} (${rc.orientacion}). ${BLOQUES[rc.orientacion].informe}` : `Matriz incompleta (${rc.rellenas} de ${rc.total} casillas): sin orientación.` });
+      if (rc.llaves.length) B.push({ t: "p", runs: [{ texto: "Factores llave: ", negrita: true }, { texto: rc.llaves.map(x => `${codigo(x.f)} (${corto(x.f.texto, 70)}; media ${String(x.media).replace(".", ",")})`).join("; ") + "." }] });
+    }
+    const n7 = rc.total ? 7 : 6;
+    B.push({ t: "h1", texto: `${n7}. Estrategias CAME` });
+    const ES = ordenarEstrategias(d.estrategias.filter(e => lleno(e.texto)));
+    if (ES.length) B.push({ t: "tabla", fuente: 8, cab: ["Cód.", "Tipo", "Estrategia", "Factores", "Impacto", "Viabilidad", "Elegida"], anchos: [6, 11, 41, 13, 9, 10, 10],
+      filas: ES.map(e => { const z = zonaEstrategia(e); return [{ texto: codigoEst(e), negrita: true }, CAME[e.tipo].nom, { texto: e.texto + (e.elegida ? `\n(${e.elegida === "si" ? "elegida" : "descartada"} a mano: ${e.motivo})` : ""), negrita: esElegida(e) }, factoresDe(d, e).map(codigo).join(", "), C_(e.impacto), C_(e.viabilidad), { texto: (esElegida(e) ? "Sí" : "No") + (z ? "\n" + ZONAS_EST[z].nom : ""), centro: true, fondo: esElegida(e) ? "EDE9FE" : "" }]; }) });
+    else B.push({ t: "p", texto: "Pendiente de definir las estrategias." });
+    B.push({ t: "h1", texto: `${n7 + 1}. Plan de acción` });
+    if (EL.length) EL.forEach(e => {
+      B.push({ t: "h2", texto: `${codigoEst(e)} · ${CAME[e.tipo].nom}: ${corto(e.texto, 120)}` });
+      if (lleno(e.objetivo.texto)) B.push({ t: "p", runs: [{ texto: "Objetivo: ", negrita: true }, { texto: e.objetivo.texto + (lleno(e.objetivo.meta) ? ` (meta: ${e.objetivo.meta}` + (lleno(e.objetivo.fecha) ? `, antes del ${fmtF(e.objetivo.fecha)})` : ")") : lleno(e.objetivo.fecha) ? ` (antes del ${fmtF(e.objetivo.fecha)})` : "") }] });
+      const AC = accionesDe(e);
+      if (AC.length) B.push({ t: "tabla", fuente: 8, cab: ["Nº", "Acción", "Responsable", "Plazo", "Indicador", "Estado"], anchos: [6, 34, 14, 13, 23, 10],
+        filas: AC.map((x, i) => [C_(`${codigoEst(e)}.${i + 1}`), textoAccion(x), x.quien, C_([fmtF(x.inicio), fmtF(x.fin)].filter(lleno).join(" a ")), textoIndicador(x.indicador), C_(ESTADOS[x.estado])]) });
+      else B.push({ t: "p", estilo: "nota", texto: "Sin acciones todavía." });
+    });
+    else B.push({ t: "p", texto: "Pendiente de elegir las estrategias." });
+    const SEG = EL.flatMap(e => accionesDe(e).filter(x => lleno(x.indicador.nombre)).map((x, i) => ({ e, x, i, u: ultimaMedida(x) }))).filter(y => y.u);
+    if (SEG.length) B.push({ t: "h2", texto: "Seguimiento de los indicadores" }, { t: "tabla", fuente: 8, cab: ["Acción", "Indicador", "Estándar", "Último valor", "Fecha", "¿Cumple?"], anchos: [9, 39, 13, 13, 13, 13],
+      filas: SEG.map(({ e, x, i, u }) => { const s = semaforo(x.indicador.estandar, u.valor); return [C_(`${codigoEst(e)}.${accionesDe(e).indexOf(x) + 1}`), x.indicador.nombre, C_(x.indicador.estandar), C_(u.valor), C_(fmtF(u.fecha)), { texto: s === "ok" ? "Sí" : s === "no" ? "No" : "—", centro: true, negrita: true, fondo: s === "ok" ? "DCFCE7" : s === "no" ? "FFE4E6" : "" }]; }) });
+    B.push({ t: "h1", texto: `${n7 + 2}. Conclusiones` }, { t: "p", texto: lleno(d.conclusiones) ? d.conclusiones : conclusionesSugeridas(d) });
+    if (lleno(d.proxRevision)) B.push({ t: "p", runs: [{ texto: "Próxima revisión del DAFO: ", negrita: true }, { texto: fmtF(d.proxRevision) }] });
+    const cand = candidatos(d);
+    if (cand.length) B.push({ t: "salto" }, { t: "h1", texto: "Anexo I. Factores que merecen un análisis propio" }, { t: "tabla", fuente: 8, cab: ["Cód.", "Factor", "Análisis", "Proceso", "Motivo"], anchos: [7, 33, 13, 22, 25],
+      filas: cand.map(f => [{ texto: codigo(f), negrita: true, fondo: FONDO_Q[f.tipo] }, f.texto, DESTINOS[f.candidato.destino].nom, f.candidato.proceso, f.candidato.motivo]) });
+    B.push({ t: "h1", texto: `Anexo ${cand.length ? "II" : "I"}. Escalas` }, { t: "tabla", fuente: 8, cab: ["Puntos", "Importancia", "Probabilidad (externos)"], anchos: [10, 45, 45], filas: ESC_IMP.map((x, i) => [C_(i + 1), x, ESC_PROB[i]]) },
+      { t: "tabla", fuente: 8, cab: ["Puntos", "Impacto de una estrategia", "Viabilidad"], anchos: [10, 45, 45], filas: IMPACTO.map((x, i) => [C_(i + 1), x, VIABILIDAD[i]]) });
+    return { titulo: "DAFO · CAME · " + nom, bloques: B };
+  }
+  function documentoResumen(d, fecha) {
+    const B = [], rc = resultadoCruces(d), EL = elegidas(d), fin = FINALIDADES[d.finalidad], nom = d.objeto || nombreDafo(d) || "Sin nombre";
+    B.push({ t: "h1", texto: "Resumen para la Dirección · " + nom }, { t: "p", estilo: "nota", texto: ["Análisis DAFO · CAME", fin ? fin.nom : "", d.horizonte, d.fecha || fecha].filter(lleno).join(" · ") });
+    B.push({ t: "h2", texto: "La foto: matriz DAFO" }, bloqueMatrizDafo(d, 7));
+    if (rc.orientacion) B.push({ t: "p", runs: [{ texto: `Orientación ${BLOQUES[rc.orientacion].nom.toLowerCase()} (${rc.orientacion}). `, negrita: true }, { texto: BLOQUES[rc.orientacion].informe }] });
+    B.push({ t: "h2", texto: "Lo que vamos a hacer" });
+    if (EL.length) B.push({ t: "tabla", fuente: 7, cab: ["Estrategia", "Objetivo", "Indicador principal", "Responsable"], anchos: [36, 30, 20, 14],
+      filas: EL.map(e => { const x = accionesDe(e).find(y => lleno(y.indicador.nombre)) || accionesDe(e)[0]; return [{ texto: `${codigoEst(e)} · ${CAME[e.tipo].nom}\n${e.texto}`, negrita: false }, [e.objetivo.texto, fmtF(e.objetivo.fecha)].filter(lleno).join(" · "), x ? [x.indicador.nombre, x.indicador.estandar].filter(lleno).join(" · ") : "", x ? x.quien : ""]; }) });
+    else B.push({ t: "p", texto: "Pendiente de elegir las estrategias." });
+    // Conclusión breve: la matriz y la tabla ya dicen lo demás (así cabe en una página)
+    const cand = candidatos(d), breve = [cand.length ? `${cand.length === 1 ? "Un factor merece" : cand.length + " factores merecen"} un análisis propio: ${cand.map(f => `${codigo(f)} (${DESTINOS[f.candidato.destino].nom})`).join(", ")}.` : "",
+      lleno(d.proxRevision) ? `Próxima revisión del DAFO: ${fmtF(d.proxRevision)}.` : "El DAFO se revisará cada año."].filter(lleno).join(" ");
+    B.push({ t: "h2", texto: "Conclusión" }, { t: "p", texto: lleno(d.conclusiones) ? d.conclusiones : breve });
+    return { titulo: "DAFO · Resumen · " + nom, bloques: B };
+  }
+  // Lámina: la matriz y las estrategias elegidas, en una sola hoja apaisada
+  function documentoLamina(d, fecha) {
+    const EL = elegidas(d), nom = d.objeto || nombreDafo(d) || "Sin nombre";
+    return { titulo: "DAFO · Lámina · " + nom, horizontal: true, bloques: [
+      { t: "h1", texto: `DAFO · ${nom}${d.fecha ? " · " + d.fecha : ""}` }, bloqueMatrizDafo(d, 7.5),
+      { t: "h2", texto: "Estrategias CAME elegidas" },
+      EL.length ? { t: "tabla", fuente: 7.5, sinCab: true, anchos: [6, 10, 84], filas: EL.map(e => [{ texto: codigoEst(e), negrita: true }, { texto: CAME[e.tipo].nom, negrita: true, fondo: FONDO_Q[CAME[e.tipo].sobre] }, e.texto]) } : { t: "p", texto: "Pendiente de elegir las estrategias." }
+    ] };
+  }
+
   // ---------- Intercambio con las otras apps (formato dafo-came, versión 1) ----------
   // Las otras apps no leen dafo-datos: leen este paquete con forma fija (también va en la copia .json, clave «intercambio»).
   const FORMATO_INTERCAMBIO = "dafo-came", VERSION_INTERCAMBIO = 1;
@@ -503,7 +869,16 @@
               prioritario: e.prio, motivoPrioridad: e.por, motivo: f.motivo || null };
           })),
           cruces: ORDEN_BLOQUES.flatMap(k => { const B = BLOQUES[k]; return r.ejes[B.fila].flatMap(f => r.ejes[B.col].map(g => ({ fila: cod[f.id], columna: cod[g.id], bloque: k, valor: valorCruce(d, f, g) })).filter(x => x.valor !== null)); }),
-          estrategias: [], candidatos: []
+          estrategias: ordenarEstrategias(d.estrategias.filter(e => lleno(e.texto))).map(e => ({
+            id: e.id, codigo: codigoEst(e), tipo: e.tipo, tipoNombre: CAME[e.tipo].nom, bloque: CAME[e.tipo].bloque, texto: e.texto, factores: factoresDe(d, e).map(codigo),
+            impacto: n3(e.impacto), viabilidad: n3(e.viabilidad), zona: zonaEstrategia(e), elegida: esElegida(e),
+            objetivo: { texto: e.objetivo.texto, meta: e.objetivo.meta, fecha: e.objetivo.fecha || null },
+            acciones: accionesDe(e).map(x => ({ que: x.que, quien: x.quien, inicio: x.inicio || null, fin: x.fin || null, recursos: x.recursos, como: x.como,
+              indicador: { nombre: x.indicador.nombre, formula: x.indicador.formula, estandar: x.indicador.estandar, fuente: x.indicador.fuente }, fuerza: fuerzaMedida(x.que) || null, estado: x.estado,
+              ultimo: (u => u ? { fecha: u.fecha, valor: u.valor, cumple: semaforo(x.indicador.estandar, u.valor) === "ok" } : null)(ultimaMedida(x)) }))
+          })),
+          candidatos: candidatos(d).map(f => ({ factorId: f.id, codigo: codigo(f), tipo: f.tipo, texto: f.texto, evidencia: f.evidencia, destino: f.candidato.destino, proceso: f.candidato.proceso, motivo: f.candidato.motivo,
+            importancia: numONull(f.importancia), peso: peso(f) }))
         };
       })
     };
@@ -562,7 +937,7 @@
     h3.push([T("Media", "eje"), ...cols.map(g => { const pf = r.porFactor.find(x => x.f === g); return { numero: pf ? pf.media : 0, estilo: "eje" }; }), T("", "eje")]);
     h3.push([]); h3.push(["Bloque", "Estrategia", "Postura", "Suma", "Casillas", "Media"].map(x => T(x, "cab")));
     ORDEN_BLOQUES.forEach(k => { const b = r.bloques[k], B = BLOQUES[k]; h3.push([T(k, "negrita"), T(B.verbo), T(B.nom), { numero: b.suma, estilo: "centro" }, { numero: b.casillas, estilo: "centro" }, { numero: b.media, estilo: k === r.orientacion ? "prio" : "centro" }]); });
-    h3.push([T(r.orientacion ? `Orientación: ${BLOQUES[r.orientacion].nom.toLowerCase()} (${r.orientacion}). ${BLOQUES[r.orientacion].texto}` : `Orientación: pendiente (${r.rellenas} de ${r.total} casillas valoradas).`, "sub")]);
+    h3.push([T(r.orientacion ? `Orientación: ${BLOQUES[r.orientacion].nom.toLowerCase()} (${r.orientacion}). ${BLOQUES[r.orientacion].informe}` : `Orientación: pendiente (${r.rellenas} de ${r.total} casillas valoradas).`, "sub")]);
     if (r.llaves.length) h3.push([T("Factores llave: " + r.llaves.map(x => `${codigo(x.f)} (media ${x.media})`).join(", "), "sub")]);
     h3.push([]); h3.push(["Código", "Factor"].map(x => T(x, "cab")));
     [...filas, ...cols].forEach(f => h3.push([T(codigo(f), "q_" + f.tipo), T(f.texto)]));
@@ -574,10 +949,22 @@
     h5.push([]); h5.push(["Puntos", "Importancia", "Probabilidad (externos)"].map(x => T(x, "cab")));
     ESC_IMP.forEach((x, i) => h5.push([T(i + 1, "centro"), T(x), T(ESC_PROB[i])]));
     h5.push([T("Peso: importancia (internos, 1–5); importancia × probabilidad (externos, 1–25).", "sub")]);
+    // 6. Estrategias, 7. Plan de acción, 8. Candidatos
+    const h6 = cabecera("Estrategias CAME · " + nom, ["Código", "Tipo", "Estrategia", "Factores", "Impacto", "Viabilidad", "Zona", "Elegida", "Motivo", "Objetivo", "Meta", "Fecha"]);
+    ordenarEstrategias(d.estrategias.filter(e => lleno(e.texto))).forEach(e => { const z = zonaEstrategia(e);
+      h6.push([T(codigoEst(e), "negrita"), T(CAME[e.tipo].nom), T(e.texto, esElegida(e) ? "negrita" : "celda"), T(factoresDe(d, e).map(codigo).join(", ")), N(n3(e.impacto)), N(n3(e.viabilidad)), T(z ? ZONAS_EST[z].nom : ""), T(esElegida(e) ? "Sí" : "No", esElegida(e) ? "prio" : "centro"), T(e.motivo), T(e.objetivo.texto), T(e.objetivo.meta), T(fmtF(e.objetivo.fecha), "centro")]); });
+    const h7 = cabecera("Plan de acción · " + nom, ["Acción", "Estrategia", "Qué", "Responsable", "Inicio", "Fin", "Recursos", "Cómo", "Fuerza", "Indicador", "Fórmula", "Estándar", "Fuente", "Estado", "Último valor", "Fecha", "¿Cumple?"]);
+    elegidas(d).forEach(e => accionesDe(e).forEach((x, i) => { const u = ultimaMedida(x), sm = u ? semaforo(x.indicador.estandar, u.valor) : null;
+      h7.push([T(`${codigoEst(e)}.${i + 1}`, "negrita"), T(codigoEst(e) + " · " + CAME[e.tipo].nom), T(x.que, "negrita"), T(x.quien), T(fmtF(x.inicio), "centro"), T(fmtF(x.fin), "centro"), T(x.recursos), T(x.como), T(FUERZAS[fuerzaMedida(x.que)] ? FUERZAS[fuerzaMedida(x.que)].nom : ""), T(x.indicador.nombre), T(x.indicador.formula), T(x.indicador.estandar, "centro"), T(x.indicador.fuente), T(ESTADOS[x.estado], "centro"), T(u ? u.valor : "", "centro"), T(u ? fmtF(u.fecha) : "", "centro"), T(sm === "ok" ? "Sí" : sm === "no" ? "No" : "", sm === "ok" ? "prio" : "centro")]); }));
+    const h8 = cabecera("Factores que merecen un análisis propio · " + nom, ["Código", "Factor", "Análisis", "Proceso", "Motivo"]);
+    candidatos(d).forEach(f => h8.push([T(codigo(f), "q_" + f.tipo), T(f.texto, "negrita"), T(DESTINOS[f.candidato.destino].nom), T(f.candidato.proceso), T(f.candidato.motivo)]));
     return { estilos: ESTILOS_XLSX, hojas: [
       { nombre: "Factores", filas: h1, opciones: { anchoColumnas: [8, 14, 46, 22, 34, 28, 16, 11, 11, 7, 8, 11, 34], congelar: { filas: 3, columnas: 0 }, altoFilas: { 1: 24 }, primera: true } },
       { nombre: "Matriz DAFO", filas: h2, opciones: { anchoColumnas: [60, 60], altoFilas: { 1: 24 } } },
       { nombre: "Matriz cruzada", filas: h3, opciones: { anchoColumnas: [9, ...cols.map(() => 7), 8], altoFilas: { 1: 24 } } },
+      { nombre: "Estrategias", filas: h6, opciones: { anchoColumnas: [8, 11, 50, 16, 9, 10, 18, 9, 34, 40, 14, 11], congelar: { filas: 3, columnas: 0 } } },
+      { nombre: "Plan de acción", filas: h7, opciones: { anchoColumnas: [8, 16, 44, 22, 11, 11, 24, 30, 16, 34, 30, 11, 22, 11, 11, 11, 10], congelar: { filas: 3, columnas: 0 } } },
+      { nombre: "Candidatos", filas: h8, opciones: { anchoColumnas: [8, 46, 14, 34, 46] } },
       { nombre: "Fuentes", filas: h4, opciones: { anchoColumnas: [5, 40, 26, 14, 40, 20], congelar: { filas: 3, columnas: 0 } } },
       { nombre: "Ficha", filas: h5, opciones: { anchoColumnas: [26, 70, 50] } }
     ] };
@@ -653,13 +1040,25 @@
   const ESQ = {
     fuente: { id: "id", tipo: { en: Object.keys(FUENTES_TIPO) }, nombre: [300], fecha: [40], nota: [1000] },
     factor: { id: "id", tipo: { en: TIPOS }, num: "ent", texto: [500], area: { en: [...Object.keys(AREAS), ...Object.keys(AMBITOS)] }, evidencia: [1000], fuenteId: "ref",
-      aporta: { en: Object.keys(APORTA) }, importancia: [2], probabilidad: [2], manual: { en: ["si", "no"] }, motivo: [500] },
+      aporta: { en: Object.keys(APORTA) }, importancia: [2], probabilidad: [2], manual: { en: ["si", "no"] }, motivo: [500], candidato: { obj: "candidato" } },
+    candidato: { destino: { en: ["amfe", "mapa", "auditoria"] }, proceso: [300], motivo: [800] },
+    indicador: { nombre: [300], formula: [500], estandar: [100], fuente: [300] },
+    objetivo: { texto: [1000], meta: [200], fecha: [20] },
+    medida: { id: "id", fecha: [20], valor: [40], nota: [300] },
+    accion: { id: "id", que: [1000], quien: [300], inicio: [20], fin: [20], recursos: [500], como: [1000], indicador: { obj: "indicador" }, estado: { en: ["pendiente", "curso", "hecha", "verificada"] }, nota: [1000], seguimiento: { de: "medida", max: 60 } },
+    estrategia: { id: "id", tipo: { en: ["C", "A", "M", "E"] }, num: "ent", texto: [1000], factores: { lista: "ref", max: 30 }, impacto: [2], viabilidad: [2], elegida: { en: ["si", "no"] }, motivo: [800], origen: [100],
+      objetivo: { obj: "objetivo" }, acciones: { de: "accion", max: 30 } },
+    persona: { nombre: [200], cargo: [200] },
+    hist: { edicion: [10], fecha: [20], cambio: [300] },
+    control: { elaborado: { de: "persona", max: 10 }, revisado: { de: "persona", max: 10 }, aprobado: { de: "persona", max: 10 }, historial: { de: "hist", max: 40 } },
     prioridad: { n: "ent" },
     dafo: { id: "id", titulo: [200], objeto: [300], tipoObjeto: { en: Object.keys(TIPOS_OBJETO) }, finalidad: { en: Object.keys(FINALIDADES) }, horizonte: [200],
       mision: [1500], vision: [1500], incluye: [1500], excluye: [1500], responsable: [300], fecha: [40],
-      fuentes: { de: "fuente", max: 60 }, factores: { de: "factor", max: 400 }, prioridad: { obj: "prioridad" }, cruces: "cruces", notas: [3000], creado: [40], modificado: [40] }
+      fuentes: { de: "fuente", max: 60 }, factores: { de: "factor", max: 400 }, prioridad: { obj: "prioridad" }, cruces: "cruces", estrategias: { de: "estrategia", max: 60 }, conclusiones: [4000], proxRevision: [20], control: { obj: "control" }, notas: [3000], creado: [40], modificado: [40] }
   };
-  const FABRICA = { fuente: nuevaFuente, factor: id => nuevoFactor(id), prioridad: () => ({ n: 5 }), dafo: id => nuevoDafo(id, "") };
+  const FABRICA = { fuente: nuevaFuente, factor: id => nuevoFactor(id), prioridad: () => ({ n: 5 }), candidato: nuevoCandidato, indicador: nuevoIndicador, objetivo: nuevoObjetivo,
+    medida: nuevaMedida, accion: nuevaAccion, estrategia: id => nuevaEstrategia(id), persona: nuevaPersona, hist: () => ({ edicion: "", fecha: "", cambio: "" }),
+    control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), dafo: id => nuevoDafo(id, "") };
   function sanear(esq, o, genId) {
     if (!o || typeof o !== "object" || Array.isArray(o)) return null;
     const S = ESQ[esq], r = FABRICA[esq](genId());
@@ -670,6 +1069,7 @@
       else if (regla === "ent") { const n = num(v); r[k] = Number.isInteger(n) && n >= 0 && n < 1e6 ? n : 0; }
       else if (Array.isArray(regla)) { if (v !== undefined) r[k] = txt(v, regla[0]); }
       else if (regla === "cruces") r[k] = sanearCruces(v);
+      else if (regla.lista) r[k] = Array.isArray(v) ? [...new Set(v.slice(0, regla.max * 2).filter(idValido))].slice(0, regla.max) : [];
       else if (regla.en) r[k] = regla.en.includes(v) ? v : r[k];
       else if (regla.obj) r[k] = sanear(regla.obj, v, genId) || r[k];
       else if (regla.de) r[k] = Array.isArray(v) ? v.slice(0, regla.max).map(x => sanear(regla.de, x, genId)).filter(Boolean) : [];
@@ -695,6 +1095,10 @@
     // Cruces solo entre una fila interna (F, D) y una columna externa (O, A) que existan
     const tipoDe = {}; d.factores.forEach(f => { tipoDe[f.id] = f.tipo; });
     Object.keys(d.cruces).forEach(k => { const [a, b] = k.split("|"); if (!esInterno(tipoDe[a]) || !tipoDe[b] || esInterno(tipoDe[b])) delete d.cruces[k]; });
+    // Estrategias: solo factores que existen; números únicos
+    const ids = new Set(d.factores.map(f => f.id)), usadosE = new Set();
+    d.estrategias.forEach(e => { e.factores = e.factores.filter(id => ids.has(id)); if (!e.num || usadosE.has(e.num)) e.num = 0; else usadosE.add(e.num); });
+    d.estrategias.filter(e => !e.num).forEach(e => { e.num = siguienteNumEst(d); });
     // Números únicos dentro de cada cuadrante (los repetidos o a 0 se renumeran al final)
     TIPOS.forEach(t => {
       const usados = new Set(), l = d.factores.filter(f => f.tipo === t);
@@ -727,6 +1131,10 @@
     nPrioridad, prioridad, esPrio, prioritarios, empatesCorte, sugerirMotivo, avisosPriorizar,
     BLOQUES, ORDEN_BLOQUES, bloqueDe, estrategiaPropuesta, ESC_CRUCE, claveCruce, valorCruce, ejesCruce, resultadoCruces, avisosCruzar,
     FORMATO_INTERCAMBIO, VERSION_INTERCAMBIO, paqueteIntercambio, leerIntercambio, ESTILOS_XLSX, hojasExcel,
+    CAME, TIPOS_CAME, CAME_DE_BLOQUE, IMPACTO, VIABILIDAD, ZONAS_EST, zonaEstrategia, esElegida, codigoEst, siguienteNumEst, ordenarEstrategias, elegidas, factoresDe, estrategiasPropuestas, avisosEstrategias,
+    DESTINOS, sugerirDestino, candidatos, ESTADOS, FUERZAS, fuerzaMedida, vencida, leerEstandar, semaforo, ultimaMedida, smartAuto, accionesDe, avisosPlan, notaCalidad,
+    conclusionesSugeridas, introduccionSugerida, nuevaPersona, nuevoControl, renovarIds, nuevaEstrategia, nuevaAccion, nuevaMedida, nuevoCandidato,
+    documentoInforme, documentoResumen, documentoLamina,
     resumen, progreso, pasoPendiente, siguientePaso,
     tipoDeTexto, parsearFactores, incorporarFactores,
     ESQ, sanear, sanearDafo, sanearDatos, fusionar

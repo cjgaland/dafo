@@ -14,8 +14,16 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.02";
+  const APP_VERSION = "2026.03";
   const NOVEDADES = [
+    { version: "2026.03", fecha: "Octubre 2026", titulo: "Estrategias CAME, plan de acción y documentos", cambios: [
+      "Paso 7 · Estrategias CAME: la app las propone a partir de los cruces fuertes (o de los factores prioritarios), y cada una se puntúa en impacto y viabilidad. Se eligen las de «Hazla ya» y «Planifícala», con la posibilidad de cambiarlo a mano con motivo.",
+      "Avisos de coherencia: la debilidad o la amenaza que más pesa sin respuesta, todas las estrategias del mismo tipo, estrategias que no se apoyan en ningún factor, demasiadas elegidas…",
+      "Factores que merecen un análisis propio: márcalos como candidatos a AMFE, Mapa de Riesgos o auditoría, y llévalos a esa app.",
+      "Paso 8 · Plan de acción: objetivo con cifra y fecha, acciones con responsable, plazo, recursos e indicador (con «Traer de Indicadores»), fuerza de la medida, estado y seguimiento del indicador con aviso de si cumple el estándar.",
+      "Conclusiones propuestas con las cifras del análisis, control del documento, próxima revisión y nota de calidad del análisis.",
+      "Informe DAFO · CAME y resumen para la Dirección en Word y PDF, y lámina DAFO para imprimir en apaisado.",
+      "El ejemplo de la UGC trae sus 9 estrategias (6 elegidas), su plan de acción y dos candidatos: un AMFE y una auditoría."] },
     { version: "2026.02", fecha: "Octubre 2026", titulo: "Priorizar y cruzar los factores", cambios: [
       "Paso 5 · Quedarse con lo importante: los factores de más peso de cada cuadrante (5 por defecto, de 3 a 10), con aviso de empates en el corte. Se puede añadir o quitar cualquiera a mano, escribiendo el motivo.",
       "La matriz DAFO destaca los factores prioritarios.",
@@ -33,7 +41,7 @@
       "Pegar los factores desde Excel, Calc o Word.",
       "Matriz DAFO imprimible y en PDF, ejemplo completo de una UGC de Atención Primaria, Aprende (7 temas), glosario y copia de seguridad."] }
   ];
-  const ENTREGA = 2;   // pasos ya construidos (ver L.PASOS[].entrega)
+  const ENTREGA = 3;   // pasos ya construidos (ver L.PASOS[].entrega)
 
   // ---------- Utilidades ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -84,7 +92,7 @@
   const buscaDafo = id => datos.dafos.find(x => x.id === id);
   // Un DAFO recién creado no se guarda hasta que se escribe algo
   const borradores = new Map();
-  const esVacio = d => !d.factores.length && !d.fuentes.length && !["titulo", "objeto", "tipoObjeto", "finalidad", "horizonte", "mision", "vision", "incluye", "excluye", "responsable", "fecha"].some(k => lleno(d[k]));
+  const esVacio = d => !d.factores.length && !d.fuentes.length && !d.estrategias.length && !["titulo", "objeto", "tipoObjeto", "finalidad", "horizonte", "mision", "vision", "incluye", "excluye", "responsable", "fecha", "conclusiones"].some(k => lleno(d[k]));
 
   // ---------- Textos de ayuda reutilizables ----------
   const box = (tipo, tag, html) => `<div class="box box--${tipo}"><span class="box-tag">${tag}</span>${html}</div>`;
@@ -245,12 +253,12 @@
   let actual = null, pasoActual = 1;
   const abiertos = new Set();          // factores con «más datos» desplegado
   let pegarAbierto = false;
-  const avisosGenerales = (d, n) => L.avisosDe(d, n).filter(x => !x.factor).map(avisoHtml).join("");
+  const avisosGenerales = (d, n) => L.avisosDe(d, n).filter(x => !x.factor && !x.estrategia).map(avisoHtml).join("");
   const avisosFactor = (d, n, id) => L.avisosDe(d, n).filter(x => x.factor === id).map(avisoHtml).join("");
 
   function renderDafo(d, n) {
     actual = d; pasoActual = n; nAyuda = 0;
-    if (document.body.classList.contains("ver-informe")) { renderInforme(d); return; }
+    if (document.body.classList.contains("ver-informe")) { if (DOCS[docActual]) renderDoc(d, docActual); else renderInforme(d); return; }
     const p = L.PASOS[n - 1], disp = pasosDisp();
     const prev = disp.filter(x => x.n < n).pop(), next = disp.find(x => x.n > n);
     const cuerpo = !disponible(p) ? pasoProximo(d, p) : RENDER[n](d);
@@ -527,7 +535,230 @@
       <div data-zona="resultado">${resultadoHtml(d)}</div>`;
   }
   const progCruce = r => `<span class="badge">${r.rellenas} de ${r.total} casillas valoradas</span>${r.orientacion ? `<span class="badge badge--prio">Orientación ${r.orientacion}</span>` : ""}`;
-  const RENDER = { 1: paso1, 2: paso2, 3: paso3, 4: paso4, 5: paso5, 6: paso6 };
+  // ---------- Paso 7 · Estrategias CAME ----------
+  const qDeCame = t => L.CAME[t].sobre;                  // color de la estrategia = el del cuadrante sobre el que actúa
+  const cameBadge = e => `<span class="badge q-b q-${qDeCame(e.tipo)}">${L.CAME[e.tipo].nom}</span>`;
+  const estCod = e => `<span class="fx-cod fx-cod--est">${L.codigoEst(e)}</span>`;
+  function estadoEst(e) {
+    const z = L.zonaEstrategia(e), el = L.esElegida(e);
+    return `${z ? `<span class="badge zona-est zona-est--${z}" title="${esc(L.ZONAS_EST[z].que)}">${L.ZONAS_EST[z].nom}</span>` : ""}${e.elegida ? `<span class="badge${el ? " badge--prio" : ""}">${el ? "Elegida a mano" : "Descartada a mano"}</span>` : el ? `<span class="badge badge--prio">Elegida</span>` : `<span class="badge badge--fuera">No elegida</span>`}`;
+  }
+  const avisosEst = (d, n, id) => L.avisosDe(d, n).filter(x => x.estrategia === id && !x.accion).map(avisoHtml).join("");
+  const avisosAcc = (d, id) => L.avisosDe(d, 8).filter(x => x.accion === id).map(avisoHtml).join("");
+  const be = (e, f) => `data-es="${e.id}" data-f="${f}"`;
+  function seg3(e, k) {
+    const v = L.entero1a5(e[k]), T = k === "impacto" ? L.IMPACTO : L.VIABILIDAD;
+    return `<div class="seg seg--5" role="group" aria-label="${k === "impacto" ? "Impacto" : "Viabilidad"} de ${L.codigoEst(e)}">${[1, 2, 3].map(i => `<button type="button" class="${v === i ? "active" : ""}" data-act="es-punt" data-id="${e.id}" data-f="${k}" data-v="${i}" title="${esc(T[i - 1])}" aria-pressed="${v === i}">${i}</button>`).join("")}</div>`;
+  }
+  function estrategiaCard(d, e) {
+    const F = L.factoresDe(d, e), m = L.prioridad(d), btn = (v, t) => `<button type="button" class="pf-btn${(e.elegida || "") === v ? " on" : ""}" data-act="es-elegir" data-id="${e.id}" data-v="${v}">${t}</button>`;
+    const candidatos = d.factores.filter(f => lleno(f.texto) && (L.esPrio(m, f) || e.factores.includes(f.id)));
+    return `<div class="pf est q-${qDeCame(e.tipo)}${L.esElegida(e) ? " pf--on" : ""}" data-eid="${e.id}">
+      <div class="pf-cab">${estCod(e)}${cameBadge(e)}<span class="pf-badges" data-zestado="${e.id}">${estadoEst(e)}</span>
+        <span class="sub-acc no-print"><button type="button" class="link-btn link-btn--peligro" data-act="es-del" data-id="${e.id}">Quitar</button></span></div>
+      <div class="seg seg--mini est-tipo no-print" role="group" aria-label="Tipo de estrategia">${L.TIPOS_CAME.map(k => `<button type="button" class="${e.tipo === k ? "active" : ""}" data-act="es-tipo" data-id="${e.id}" data-v="${k}" title="${esc(L.CAME[k].que)}">${L.CAME[k].nom}</button>`).join("")}</div>
+      ${campo(e, "texto", "", { bind: be(e, "texto"), area: true, aria: "Texto de " + L.codigoEst(e), ph: "p. ej. Circuito de conciliación de la medicación al alta con la enfermera de enlace del hospital" })}
+      <details class="fx-mas"><summary>Factores en los que se apoya <span class="fx-res">${F.length ? F.map(L.codigo).join(", ") : "ninguno"}</span></summary>
+        <div class="quick">${candidatos.map(f => `<button type="button" class="chip q-chip q-${f.tipo}${e.factores.includes(f.id) ? " chip--on" : ""}" data-act="es-fac" data-id="${e.id}" data-fx="${f.id}" title="${esc(f.texto)}" aria-pressed="${e.factores.includes(f.id)}">${L.codigo(f)}</button>`).join("")}</div>
+        <ul class="est-facs">${F.map(f => `<li>${codBadge(f)} ${esc(f.texto)}</li>`).join("")}</ul></details>
+      <div class="fx-punt"><div class="fx-p"><span class="fx-pl">Impacto</span><span data-zseg="${e.id}-impacto">${seg3(e, "impacto")}</span></div><div class="fx-p"><span class="fx-pl">Viabilidad</span><span data-zseg="${e.id}-viabilidad">${seg3(e, "viabilidad")}</span></div></div>
+      <div class="pf-acc no-print">${btn("", "Según impacto y viabilidad")}${btn("si", "Sí, la elegimos")}${btn("no", "No")}</div>
+      ${e.elegida || (L.esElegida(e) && L.entero1a5(e.viabilidad) === 1) ? campo(e, "motivo", "Motivo", { bind: be(e, "motivo"), area: true, ph: e.elegida === "no" ? "p. ej. Se incluye en otra estrategia" : "p. ej. La dirección del Distrito la apoya y aporta los recursos" }) : ""}
+      <div data-zest="${e.id}">${avisosEst(d, 7, e.id)}</div>
+    </div>`;
+  }
+  // Matriz impacto × viabilidad con los códigos de las estrategias
+  function matrizEstHtml(d) {
+    const L_ = d.estrategias.filter(e => lleno(e.texto) && L.zonaEstrategia(e));
+    if (!L_.length) return `<p class="field-sub">Puntúa el impacto y la viabilidad de las estrategias para verlas aquí.</p>`;
+    const celda = (i, v) => { const z = L.zonaEstrategia({ impacto: i, viabilidad: v }), l = L_.filter(e => Number(e.impacto) === i && Number(e.viabilidad) === v);
+      return `<div class="iv-c zona-est--${z}" title="${esc(L.ZONAS_EST[z].nom)}">${l.map(e => `<span class="iv-e${L.esElegida(e) ? " iv-e--on" : ""}" title="${esc(e.texto)}">${L.codigoEst(e)}</span>`).join("")}</div>`; };
+    return `<div class="iv"><span class="iv-eje iv-eje--i">Impacto</span><div class="iv-m">${[3, 2, 1].map(i => `<span class="iv-n">${i}</span>${[1, 2, 3].map(v => celda(i, v)).join("")}`).join("")}<span></span>${[1, 2, 3].map(v => `<span class="iv-n">${v}</span>`).join("")}</div><span class="iv-eje iv-eje--v">Viabilidad</span></div>
+      <div class="leyenda">${Object.keys(L.ZONAS_EST).map(z => `<span><i class="zona-est--${z}"></i>${L.ZONAS_EST[z].nom}</span>`).join("")}<span><b class="iv-e iv-e--on">E1</b> elegida</span></div>`;
+  }
+  // Candidatos para otras apps
+  function candidatoFila(d, f) {
+    const c = f.candidato, sug = L.sugerirDestino(f);
+    return `<div class="pf q-${f.tipo}" data-fid="${f.id}">
+      <div class="pf-cab">${codBadge(f)}<span class="pf-txt"><b>${esc(f.texto)}</b>${sug && !c.destino ? `<span>La app sugiere: <b>${L.DESTINOS[sug].nom}</b></span>` : ""}</span></div>
+      <div class="pf-acc no-print">${[["", "No"], ["amfe", "AMFE"], ["mapa", "Mapa de Riesgos"], ["auditoria", "Auditoría"]].map(([v, t]) => `<button type="button" class="pf-btn${(c.destino || "") === v ? " on" : ""}" data-act="cand" data-id="${f.id}" data-v="${v}" title="${v ? esc(L.DESTINOS[v].que) : "No necesita un análisis aparte"}">${t}</button>`).join("")}</div>
+      ${c.destino ? `<div class="dos-col">${campo(f, "candidato.proceso", "Proceso o práctica que se analizaría", { bind: bx(f, "candidato.proceso"), ph: "p. ej. Conciliación de la medicación al alta hospitalaria" })}${campo(f, "candidato.motivo", "Por qué", { bind: bx(f, "candidato.motivo"), ph: "p. ej. Riesgo directo para el paciente" })}</div>
+        <div class="toolbar no-print"><button class="btn btn--sm" data-act="llevar" data-id="${f.id}">Llevar a ${L.DESTINOS[c.destino].nom} ↗</button></div>` : ""}
+    </div>`;
+  }
+  function paso7(d) {
+    const r = L.resultadoCruces(d), prop = L.estrategiasPropuestas(d), ES = L.ordenarEstrategias(d.estrategias);
+    const cand = d.factores.filter(f => lleno(f.texto) && ["D", "A"].includes(f.tipo) && (L.esPrio(L.prioridad(d), f) || f.candidato.destino));
+    return `
+      ${idea("De los cruces salen las estrategias: <b>corregir</b> debilidades, <b>afrontar</b> amenazas, <b>mantener</b> fortalezas y <b>explotar</b> oportunidades. Después se eligen <b>pocas y viables</b>.")}
+      ${facil(`<div class="table-wrap"><table class="mini"><tr><th>Estrategia</th><th>Sale de</th><th>Para qué</th></tr>${L.TIPOS_CAME.map(k => `<tr><td><b>${L.CAME[k].nom}</b></td><td>${L.CAME[k].bloque}</td><td>${esc(L.CAME[k].que)}</td></tr>`).join("")}</table></div>
+        <p>Puntúa cada estrategia de 1 a 3 en <b>impacto</b> (¿cuánto ayuda a la finalidad del análisis?) y <b>viabilidad</b> (¿se puede hacer con lo que hay?). La app propone elegir las de «Hazla ya» y «Planifícala»; el equipo decide, y si cambia la propuesta, escribe el motivo.</p>
+        ${trampa("Un plan con 20 estrategias no se cumple. Quedaos con 6 u 8 como mucho, y comprobad que la debilidad y la amenaza que más pesan tienen respuesta.")}`)}
+      ${r.orientacion ? practica(`<b>Orientación ${esc(L.BLOQUES[r.orientacion].nom.toLowerCase())} (${r.orientacion}).</b> ${esc(L.BLOQUES[r.orientacion].texto)}`) : ""}
+      <div class="toolbar no-print">${prop.length ? `<button class="btn btn--primary" data-act="es-proponer">✎ Proponer ${plural(prop.length, "estrategia", "estrategias")} ${r.fuertes.length ? "de los cruces fuertes" : "de los factores prioritarios"}</button>` : ""}<button class="btn${prop.length ? "" : " btn--primary"}" data-act="es-add">+ Añadir estrategia</button><button class="btn" data-act="excel">⬇ Excel</button></div>
+      <div data-zona="avisos">${avisosGenerales(d, 7)}</div>
+      <div class="pf-lista">${ES.map(e => estrategiaCard(d, e)).join("") || `<p class="placeholder-box">Aún no hay estrategias.${prop.length ? " Pulsa «Proponer» y revisa lo que sale." : ""}</p>`}</div>
+      <h2 class="sec-t">Impacto × viabilidad</h2>
+      <div class="card" data-zona="matrizest">${matrizEstHtml(d)}</div>
+      <h2 class="sec-t">¿Algún factor merece un análisis propio?</h2>
+      <p class="page-lead">Una debilidad o amenaza de un <b>proceso concreto con riesgo</b> para el paciente pide un <b>AMFE</b>; un proceso completo, un <b>Mapa de Riesgos</b>; una <b>práctica que hay que medir</b>, una <b>auditoría</b>. Marcadlo aquí y llevadlo a la app que toca.</p>
+      <div class="pf-lista">${cand.map(f => candidatoFila(d, f)).join("") || `<p class="placeholder-box">Prioriza primero las debilidades y amenazas (paso 5).</p>`}</div>`;
+  }
+
+  // ---------- Paso 8 · Plan de acción y seguimiento ----------
+  let indImportados = null, indPara = null;   // indicadores traídos de la app Indicadores y la acción que los espera
+  const ba = (x, f) => `data-ac="${x.id}" data-f="${f}"`;
+  const fzBadge = texto => { const z = L.fuerzaMedida(texto); return z ? `<span class="badge fz fz--${z}" title="${esc(L.FUERZAS[z].que)}">${L.FUERZAS[z].nom}</span>` : ""; };
+  function semHtml(x) {
+    const u = L.ultimaMedida(x); if (!u) return "";
+    const s = L.semaforo(x.indicador.estandar, u.valor);
+    return `<span class="badge sem sem--${s || "sin"}">Último valor: ${esc(u.valor)}${u.fecha ? " (" + esc(fmtFecha(u.fecha)) + ")" : ""}${s === "ok" ? " · cumple" : s === "no" ? " · no cumple" : ""}</span>`;
+  }
+  function smartHtml(o) {
+    const s = L.smartAuto(o);
+    return [["especifico", "Concreto"], ["medible", "Con cifra"], ["plazo", "Con fecha"]].map(([k, t]) => `<span class="badge${s[k] ? " sem--ok" : ""}">${s[k] ? "✓" : "·"} ${t}</span>`).join("");
+  }
+  function zonaInd(x) {
+    if (indPara !== x.id || !indImportados) return "";
+    return `<div class="field no-print"><div class="field-head"><label class="field-label">Elige un indicador de la app Indicadores</label></div><div class="input-wrap"><select class="txt-in" data-act-sel="usar-ind" data-ac-ind="${x.id}"><option value="">— ${plural(indImportados.length, "indicador", "indicadores")} —</option>${indImportados.map((y, i) => `<option value="${i}">${esc(L.corto(y.nombre, 90))}</option>`).join("")}</select></div></div>`;
+  }
+  function accionCard(d, e, x, i) {
+    return `<div class="acc-card" data-acid="${x.id}">
+      <div class="sub-cab"><span class="eq-n">${i + 1}</span><b>${L.codigoEst(e)}.${i + 1}</b><span data-zfz="${x.id}">${fzBadge(x.que)}</span><span data-zsem="${x.id}">${semHtml(x)}</span>
+        <span class="sub-acc no-print"><button type="button" class="link-btn link-btn--peligro" data-act="ac-del" data-id="${x.id}">Quitar</button></span></div>
+      ${campo(x, "que", "Qué se va a hacer", { bind: ba(x, "que"), area: true, ph: "p. ej. Circuito de aviso de altas con la enfermera de enlace del hospital", help: "Concreta y verificable. Las acciones que cambian el sistema (un circuito, una alerta, una agenda distinta) son más fuertes que formar o recordar." })}
+      <div class="dos-col">
+        ${campo(x, "quien", "Responsable", { bind: ba(x, "quien"), ph: "p. ej. Coordinación de cuidados", help: "Un cargo o una persona concreta, no «todos» ni «el equipo»." })}
+        ${campo(x, "recursos", "Recursos", { bind: ba(x, "recursos"), opt: true, ph: "p. ej. Sin coste: tiempo de enfermería" })}
+      </div>
+      <div class="dos-col">
+        ${campo(x, "inicio", "Inicio", { bind: ba(x, "inicio"), tipo: "date", opt: true })}
+        ${campo(x, "fin", "Fecha de fin", { bind: ba(x, "fin"), tipo: "date" })}
+      </div>
+      ${campo(x, "como", "Cómo", { bind: ba(x, "como"), area: true, opt: true, ph: "p. ej. Listado diario de altas y cita en los 7 días siguientes" })}
+      <div class="acc-ind">
+        <div class="sub-cab"><b>Indicador</b><span class="sub-acc no-print"><button type="button" class="link-btn" data-act="ind-traer" data-id="${x.id}">Traer de Indicadores</button></span></div>
+        <div data-zind="${x.id}">${zonaInd(x)}</div>
+        ${campo(x, "indicador.nombre", "Nombre", { bind: ba(x, "indicador.nombre"), ph: "p. ej. % de altas con la medicación conciliada en 7 días" })}
+        <div class="dos-col">
+          ${campo(x, "indicador.formula", "Fórmula", { bind: ba(x, "indicador.formula"), opt: true, ph: "Numerador / denominador × 100" })}
+          ${campo(x, "indicador.estandar", "Estándar", { bind: ba(x, "indicador.estandar"), ph: "p. ej. ≥ 80 %", help: "El valor que consideraréis bueno. Escríbelo con ≥ o ≤ (o «3 de 3») y la app dirá si cada medida lo cumple." })}
+        </div>
+        ${campo(x, "indicador.fuente", "Fuente de datos", { bind: ba(x, "indicador.fuente"), opt: true, ph: "p. ej. Historia de salud digital" })}
+      </div>
+      <div class="field"><div class="field-head"><label class="field-label">Estado</label></div><div class="seg seg--mini" role="group" aria-label="Estado">${Object.entries(L.ESTADOS).map(([k, t]) => `<button type="button" class="${x.estado === k ? "active" : ""}" data-act="ac-estado" data-id="${x.id}" data-v="${k}">${t}</button>`).join("")}</div></div>
+      <details class="fx-mas"${x.seguimiento.length ? " open" : ""}><summary>Seguimiento del indicador <span class="fx-res">${plural(x.seguimiento.length, "medida", "medidas")}</span></summary>
+        ${x.seguimiento.map(mm => `<div class="persona persona--hist med">
+          <input class="txt-in" type="date" data-me="${mm.id}" data-f="fecha" value="${esc(mm.fecha)}" aria-label="Fecha" />
+          <input class="txt-in" data-me="${mm.id}" data-f="valor" value="${esc(mm.valor)}" placeholder="Valor" inputmode="decimal" autocomplete="off" aria-label="Valor" />
+          <input class="txt-in" data-me="${mm.id}" data-f="nota" value="${esc(mm.nota)}" placeholder="Nota" autocomplete="off" aria-label="Nota" />
+          <button type="button" class="icon-btn no-print" data-act="me-del" data-id="${mm.id}" aria-label="Quitar">✕</button></div>`).join("")}
+        <button type="button" class="link-btn no-print" data-act="me-add" data-id="${x.id}">+ Añadir una medida</button></details>
+      <div data-zac="${x.id}">${avisosAcc(d, x.id)}</div>
+    </div>`;
+  }
+  function planCard(d, e) {
+    return `<section class="plan q-${qDeCame(e.tipo)}">
+      <h3 class="plan-t">${estCod(e)}${cameBadge(e)} <span>${esc(e.texto)}</span></h3>
+      <div class="card">
+        ${campo(e, "objetivo.texto", "Objetivo", { bind: be(e, "objetivo.texto"), area: true, ph: "p. ej. Que el 80 % de las altas tengan la medicación conciliada en 7 días", help: "Qué queréis conseguir, con una cifra y una fecha: específico, medible, alcanzable, relevante y con plazo (SMART)." })}
+        <div class="dos-col">
+          ${campo(e, "objetivo.meta", "Meta", { bind: be(e, "objetivo.meta"), opt: true, ph: "p. ej. ≥ 80 %" })}
+          ${campo(e, "objetivo.fecha", "Fecha", { bind: be(e, "objetivo.fecha"), tipo: "date" })}
+        </div>
+        <div class="res-linea" data-zsmart="${e.id}">${smartHtml(e.objetivo)}</div>
+        <div data-zest="${e.id}">${avisosEst(d, 8, e.id)}</div>
+      </div>
+      <div class="acc-lista">${e.acciones.map((x, i) => accionCard(d, e, x, i)).join("")}</div>
+      <button class="btn btn--sm no-print" data-act="ac-add" data-id="${e.id}">+ Añadir acción a ${L.codigoEst(e)}</button>
+    </section>`;
+  }
+  function personasHtml(d, k, titulo) {
+    return `<div class="personas"><p class="personas-t">${titulo}</p>${d.control[k].map((x, i) => `<div class="persona">
+      <input class="txt-in" data-cp="${k}" data-i="${i}" data-f="nombre" value="${esc(x.nombre)}" placeholder="Nombre (opcional)" autocomplete="off" />
+      <input class="txt-in" data-cp="${k}" data-i="${i}" data-f="cargo" value="${esc(x.cargo)}" placeholder="Cargo" autocomplete="off" />
+      <button type="button" class="icon-btn no-print" data-act="cp-del" data-k="${k}" data-i="${i}" aria-label="Quitar">✕</button></div>`).join("")}
+      <button type="button" class="link-btn no-print" data-act="cp-add" data-k="${k}">+ Añadir persona</button></div>`;
+  }
+  function controlHtml(d) {
+    return `${personasHtml(d, "elaborado", "Elaborado por")}${personasHtml(d, "revisado", "Revisado por")}${personasHtml(d, "aprobado", "Aprobado por")}
+      <div class="personas"><p class="personas-t">Histórico de revisiones</p>${d.control.historial.map((h, i) => `<div class="persona persona--hist">
+        <input class="txt-in" data-ch="${i}" data-f="edicion" value="${esc(h.edicion)}" placeholder="Ed." autocomplete="off" />
+        <input class="txt-in" type="date" data-ch="${i}" data-f="fecha" value="${esc(h.fecha)}" />
+        <input class="txt-in" data-ch="${i}" data-f="cambio" value="${esc(h.cambio)}" placeholder="Qué cambia" autocomplete="off" />
+        <button type="button" class="icon-btn no-print" data-act="ch-del" data-i="${i}" aria-label="Quitar">✕</button></div>`).join("")}
+        <button type="button" class="link-btn no-print" data-act="ch-add">+ Nueva edición</button></div>`;
+  }
+  function notaHtml(d) {
+    const n = L.notaCalidad(d);
+    return `<div class="nota nota--${n.nivel}"><b class="nota-n">${n.nota}<small>/${n.de}</small></b><div><b>Calidad del análisis</b><p>${esc(n.texto)}</p></div></div>
+      <ul class="nota-l">${n.comprobaciones.map(c => `<li class="${c.ok ? "ok" : "no"}"><span>${c.ok ? "✓" : "✕"}</span><span>${esc(c.texto)}${c.ok ? "" : ` · <a href="#/dafo/${d.id}/${c.paso}">${esc(c.consejo)}</a>`}</span></li>`).join("")}</ul>`;
+  }
+  function paso8(d) {
+    const EL = L.elegidas(d);
+    return `
+      ${idea("Cada estrategia elegida se convierte en un <b>objetivo</b> con cifra y fecha, y en <b>acciones</b> con responsable, plazo e <b>indicador</b>. Sin eso, el DAFO se queda en el cajón.")}
+      ${facil(`<p>Un objetivo es <b>SMART</b> si es específico, medible, alcanzable, relevante y con plazo: «que el 80 % de las altas tengan la medicación conciliada en 7 días antes de diciembre de 2027», y no «mejorar la conciliación».</p>
+        <p>Las acciones que <b>cambian el sistema</b> (un circuito, una alerta en la historia clínica, una agenda distinta) son más fuertes que las que dependen de la memoria (formar, recordar, sensibilizar).</p>
+        <p>En <b>seguimiento</b>, apuntad el valor del indicador cada vez que lo midáis: la app dice si cumple el estándar.</p>`)}
+      <div data-zona="avisos">${avisosGenerales(d, 8)}</div>
+      ${EL.length ? EL.map(e => planCard(d, e)).join("") : `<div class="placeholder-box"><p>Aún no hay estrategias elegidas. <a href="#/dafo/${d.id}/7">Elígelas en el paso 7</a>.</p></div>`}
+      <h2 class="sec-t">Cierre</h2>
+      <div class="card">
+        ${campo(d, "conclusiones", "Conclusiones", { area: true, rows: 4, ph: "Si las dejas vacías, el informe usa un texto propuesto con las cifras del análisis", extra: proponer("sug-concl", "✎ Proponer conclusiones con las cifras") })}
+        ${campo(d, "proxRevision", "Próxima revisión del DAFO", { tipo: "date", help: "Lo habitual es cada año, con el nuevo acuerdo de gestión, o antes si cambia algo importante." })}
+      </div>
+      <h2 class="sec-t">Control del documento</h2>
+      <div class="card">${controlHtml(d)}</div>
+      <h2 class="sec-t">Nota de calidad</h2>
+      <div class="card" data-zona="nota">${notaHtml(d)}</div>
+      <h2 class="sec-t">Documentos</h2>
+      <div class="doc-botones">
+        <div class="card"><h3 class="sub-h">Informe DAFO · CAME</h3><p class="field-sub">El documento completo: control, introducción, metodología y fuentes, análisis interno y externo, matrices, estrategias, plan de acción, seguimiento, conclusiones y anexos.</p>
+          <div class="toolbar"><button class="btn btn--primary" data-act="doc-word" data-doc="informe">⬇ Word</button><button class="btn" data-act="doc-ver" data-doc="informe">Ver / PDF</button></div></div>
+        <div class="card"><h3 class="sub-h">Resumen para la Dirección</h3><p class="field-sub">Una página: la matriz DAFO, la orientación y lo que se va a hacer, con su objetivo e indicador.</p>
+          <div class="toolbar"><button class="btn btn--primary" data-act="doc-word" data-doc="resumen">⬇ Word</button><button class="btn" data-act="doc-ver" data-doc="resumen">Ver / PDF</button></div></div>
+        <div class="card"><h3 class="sub-h">Lámina DAFO</h3><p class="field-sub">La matriz y las estrategias elegidas en una hoja apaisada, para la sesión o el tablón.</p>
+          <div class="toolbar"><button class="btn btn--primary" data-act="doc-ver" data-doc="lamina">Ver / imprimir</button><button class="btn" data-act="doc-word" data-doc="lamina">⬇ Word</button></div></div>
+        <div class="card"><h3 class="sub-h">Análisis y Excel</h3><p class="field-sub">Todos los factores, las matrices y el plan para imprimir, y el libro de Excel con todas las hojas.</p>
+          <div class="toolbar"><button class="btn" data-act="informe">Ver análisis / PDF</button><button class="btn" data-act="excel">⬇ Excel</button></div></div>
+      </div>`;
+  }
+  const RENDER = { 1: paso1, 2: paso2, 3: paso3, 4: paso4, 5: paso5, 6: paso6, 7: paso7, 8: paso8 };
+
+  // ---------- Documentos: bloques → HTML (vista previa, imprimir y PDF) y → Word ----------
+  function bloquesHtml(bloques) {
+    const celda = (c, cab) => { const o = c !== null && typeof c === "object" ? c : { texto: c }; const st = o.fondo ? ` style="background:#${o.fondo}"` : ""; const cl = [o.centro ? "c" : "", o.negrita ? "b" : ""].filter(Boolean).join(" "); return `<${cab ? "th" : "td"}${cl ? ` class="${cl}"` : ""}${st}>${escMl(o.texto)}</${cab ? "th" : "td"}>`; };
+    return bloques.map(b => {
+      if (b.t === "portada") return `<div class="doc-portada"><h1>${esc(b.titulo)}</h1>${b.sub ? `<p class="doc-sub">${esc(b.sub)}</p>` : ""}${(b.extra || []).map(x => `<p>${esc(x)}</p>`).join("")}</div>`;
+      if (b.t === "h1") return `<h2 class="doc-h1">${esc(b.texto)}</h2>`;
+      if (b.t === "h2") return `<h3 class="doc-h2">${esc(b.texto)}</h3>`;
+      if (b.t === "p") return `<p class="doc-p${b.estilo === "nota" ? " doc-nota" : ""}">${b.runs ? b.runs.map(r => r.negrita ? `<b>${escMl(r.texto)}</b>` : escMl(r.texto)).join("") : escMl(b.texto)}</p>`;
+      if (b.t === "lista") return `<ul class="doc-ul">${b.items.map(i => `<li>${esc(typeof i === "string" ? i : i.texto)}</li>`).join("")}</ul>`;
+      if (b.t === "salto") return `<div class="doc-salto"></div>`;
+      if (b.t === "tabla") {
+        const suma = (b.anchos || []).reduce((a, x) => a + x, 0);
+        const cols = b.anchos ? `<colgroup>${b.anchos.map(w => `<col style="width:${(w / suma * 100).toFixed(1)}%">`).join("")}</colgroup>` : "";
+        return `<div class="table-wrap"><table class="doc-t${b.fuente && b.fuente < 9 ? " doc-t--peq" : ""}">${cols}${b.cab && !b.sinCab ? `<thead><tr>${b.cab.map(c => celda(c, true)).join("")}</tr></thead>` : ""}<tbody>${b.filas.map(f => `<tr>${f.map(c => celda(c, false)).join("")}</tr>`).join("")}</tbody></table></div>`;
+      }
+      return "";
+    }).join("");
+  }
+  const DOCS = { informe: L.documentoInforme, resumen: L.documentoResumen, lamina: L.documentoLamina };
+  function renderDoc(d, cual) {
+    const doc = DOCS[cual](d, new Date().toLocaleDateString("es-ES"));
+    view.innerHTML = `<div class="informe-bar informe-only"><button class="btn" data-act="volver">← Volver</button><span class="informe-acc"><button class="btn" data-act="doc-word" data-doc="${cual}">⬇ Word</button><button class="btn btn--primary" data-act="imprimir">Guardar / imprimir</button></span></div>
+      ${cual === "lamina" ? `<style>@page { size: A4 landscape; margin: 12mm; }</style>` : ""}
+      <div class="doc-prev doc-prev--informe${cual === "lamina" ? " doc-prev--lamina" : ""}">${bloquesHtml(doc.bloques)}</div>${cual === "lamina" ? "" : informePie()}`;
+  }
+  function descargarWord(d, cual) {
+    try {
+      const doc = DOCS[cual](d, new Date().toLocaleDateString("es-ES"));
+      const bytes = window.Docx.construirDocx(Object.assign({ pie: doc.titulo + " · Generado con la app DAFO · CAME" }, doc));
+      const base = ({ resumen: "DAFO Resumen ", lamina: "DAFO Lamina " }[cual] || "DAFO Informe ") + (nombreDafo(d) || "").slice(0, 60);
+      compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `${base.replace(/[\\/:*?"<>|%]/g, "").trim()} ${fechaArchivo()}.docx`, "Word descargado. Ábrelo con Word, Pages o LibreOffice y ajústalo a tu gusto.");
+    } catch (e) { toast("No se ha podido crear el Word.", 4000); }
+  }
 
   // ---------- Matriz DAFO (2 × 2) ----------
   // soloPrio: con la entrega 2, los prioritarios destacan y el resto se ve atenuado
@@ -583,8 +814,15 @@
     const Z = {
       pasos: () => pasosInner(d, n), avisos: () => avisosGenerales(d, n), consejo: () => consejoHtml(d),
       nfu: () => String(d.fuentes.length), matriz: () => matrizHtml(d, n >= 5 || ENTREGA >= 2),
-      progcruce: () => progCruce(L.resultadoCruces(d)), resultado: () => resultadoHtml(d)
+      progcruce: () => progCruce(L.resultadoCruces(d)), resultado: () => resultadoHtml(d),
+      matrizest: () => matrizEstHtml(d), nota: () => notaHtml(d)
     };
+    $$("[data-zest]").forEach(el => { el.innerHTML = avisosEst(d, n, el.dataset.zest); });
+    $$("[data-zac]").forEach(el => { el.innerHTML = avisosAcc(d, el.dataset.zac); });
+    $$("[data-zestado]").forEach(el => { const e = d.estrategias.find(x => x.id === el.dataset.zestado); if (e) el.innerHTML = estadoEst(e); });
+    $$("[data-zsmart]").forEach(el => { const e = d.estrategias.find(x => x.id === el.dataset.zsmart); if (e) el.innerHTML = smartHtml(e.objetivo); });
+    $$("[data-zfz]").forEach(el => { const r = buscaAccion(d, el.dataset.zfz); if (r) el.innerHTML = fzBadge(r.x.que); });
+    $$("[data-zsem]").forEach(el => { const r = buscaAccion(d, el.dataset.zsem); if (r) el.innerHTML = semHtml(r.x); });
     if (n === 6) { const r = L.resultadoCruces(d); $$("[data-zmf]").forEach(el => { const f = d.factores.find(x => x.id === el.dataset.zmf); if (f) el.textContent = mediaDe(r, f); }); }
     L.TIPOS.forEach(t => { Z["n" + t] = () => String(d.factores.filter(f => f.tipo === t && lleno(f.texto)).length); });
     $$("[data-zona]").forEach(el => { const f = Z[el.dataset.zona]; if (f) el.innerHTML = f(); });
@@ -815,7 +1053,7 @@
     if (esIOS() && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: nombre }).catch(() => {});
     else { descargar(blob, nombre); toast(msg, 3000); }
   }
-  function irInforme() { location.hash = rutaActual() + "?informe=1"; }
+  function irInforme(doc) { location.hash = rutaActual() + "?informe=1" + (doc ? "&doc=" + doc : ""); }
   function imprimir() {
     if (esIOS()) { guardarPDF(); return; }
     if (!document.body.classList.contains("ver-informe")) { irInforme(); setTimeout(() => window.print(), 400); return; }
@@ -871,24 +1109,46 @@
   // ---------- Copiar un ejemplo a mis datos ----------
   function copiarAMisDatos() {
     if (!actual || !esIdEjemplo(actual.id)) return;
-    const c = L.sanearDafo(Object.assign(clon(actual), { id: genId(), creado: hoy(), modificado: hoy() }), genId, hoy());
-    // Ids nuevos para todo lo de dentro (nunca se guarda un id «ej-»), conservando qué fuente cita cada factor
-    const mapa = {}; c.fuentes.forEach(x => { const n = genId(); mapa[x.id] = n; x.id = n; });
-    c.factores.forEach(f => { f.id = genId(); f.fuenteId = mapa[f.fuenteId] || ""; });
+    const c = L.renovarIds(L.sanearDafo(Object.assign(clon(actual), { id: genId(), creado: hoy(), modificado: hoy() }), genId, hoy()), genId);
     c.notas = "";
     datosUsuario.dafos.push(c); guardar(true); location.hash = `#/dafo/${c.id}/${pasoActual}`;
     toast("Copiado a tus DAFO. Ya es tuyo: cámbialo a tu gusto.", 4000);
+  }
+
+  // ---------- Llevar un candidato a otra app ----------
+  // Cada app escribe solo en sus datos: DAFO deja el candidato en su paquete de intercambio y abre la otra app.
+  function llevarA(d, f) {
+    if (!f || !f.candidato.destino) return;
+    const D = L.DESTINOS[f.candidato.destino], proc = f.candidato.proceso || f.texto;
+    guardar(true);
+    try { if (navigator.clipboard) navigator.clipboard.writeText(proc).catch(() => {}); } catch (e) { /* */ }
+    const donde = f.candidato.destino === "amfe" ? "<p>En <b>AMFE</b>, crea un AMFE nuevo y pega el nombre del proceso.</p>"
+      : f.candidato.destino === "mapa" ? "<p>La app <b>Mapa de Riesgos</b> todavía no está publicada. Mientras, <b>Auditorías</b> tiene su propio Mapa de Riesgos: créalo allí con este proceso.</p>"
+      : "<p>En <b>Auditorías</b>, crea una auditoría nueva (o añádela a tu Plan Anual) con esta práctica como objeto.</p>";
+    confirmar(`<p>Se abrirá ${D.nom === "Mapa de Riesgos" ? "Auditorías" : D.nom} en otra pestaña. He copiado el nombre del proceso: <b>«${esc(proc)}»</b>.</p>${donde}<p class="field-sub">Cuando ${D.nom === "AMFE" ? "AMFE" : "esa app"} tenga el botón «Traer de DAFO», podrá traer este factor con su dato y su motivo directamente. Para otro dispositivo, descarga la copia de seguridad de DAFO: lleva el factor dentro.</p>`,
+      "Abrir " + (D.nom === "Mapa de Riesgos" ? "Auditorías" : D.nom), () => window.open(D.url, "_blank", "noopener"), { titulo: "Llevar a " + D.nom, peligro: false, otro: ["Descargar la copia", copiaSeguridad] });
+  }
+  // Indicadores de la app Indicadores (su copia o localStorage["indicadores-datos"]), como en AMFE
+  function indicadoresDe(o) {
+    if (!o || typeof o !== "object" || !Array.isArray(o.indicadores)) return null;
+    const t = v => (typeof v === "string" || typeof v === "number") ? String(v).slice(0, 500) : "";
+    return o.indicadores.slice(0, 300).filter(x => x && typeof x === "object" && lleno(x.nombre)).map(x => {
+      const e = t(x.estandar).replace(/[^\d.,]/g, "");
+      return { nombre: t(x.nombre), formula: [t(x.numerador), t(x.denominador)].every(lleno) ? `${t(x.numerador)} / ${t(x.denominador)} × 100` : "",
+        estandar: e ? `${x.sentido === "menos" ? "≤" : "≥"} ${e} %` : "", fuente: [...(Array.isArray(x.fuentes) ? x.fuentes.map(t) : []), t(x.fuenteOtra)].filter(lleno).join(", ") };
+    });
   }
 
   // ---------- Enrutado ----------
   const NAV = [["", "Inicio"], ["dafo", "Mis DAFO"], ["ejemplos", "Ejemplos"], ["aprende", "Aprende"], ["glosario", "Glosario"]];
   function buildNav() { $("#calc-nav").innerHTML = NAV.map(([r, t]) => `<a href="#/${r}" data-r="${r}">${t}</a>`).join(""); }
   function noEncontrado(que, href, txt) { view.innerHTML = `<div class="error-box">No se encuentra ${que} en este dispositivo.</div><p><a href="${href}">${txt}</a></p>`; }
-  let previo = null;
+  let previo = null, docActual = "";
   function route() {
     const [ruta, qs] = (location.hash.replace(/^#\/?/, "") || "").split("?");
     const partes = ruta.split("/"), q = new URLSearchParams(qs || "");
     const informe = q.get("informe") === "1";
+    docActual = informe ? (q.get("doc") || "") : "";
     document.body.classList.toggle("ver-informe", informe);
     actual = null;
     const idR = partes[1] || "", ej = ejemplos();
@@ -928,6 +1188,9 @@
     guardar();
   }
   const buscaEn = (lista, id) => lista.find(x => x.id === id);
+  function buscaAccion(d, id) { for (const e of d.estrategias) { const x = e.acciones.find(y => y.id === id); if (x) return { e, x }; } return null; }
+  function buscaMedida(d, id) { for (const e of d.estrategias) for (const x of e.acciones) { const m = x.seguimiento.find(y => y.id === id); if (m) return { e, x, m }; } return null; }
+  const hoyIso = () => new Date().toISOString().slice(0, 10);
   // Los cuadros de texto crecen con lo escrito
   function autoAlto(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; }
   new MutationObserver(() => $$("textarea.txt-in", view).forEach(el => { if (!el.closest("[hidden]") && !el.closest("details:not([open])")) autoAlto(el); })).observe(view, { childList: true, subtree: true });
@@ -949,7 +1212,18 @@
       const x = buscaEn(d.fuentes, t.dataset.u); if (!x) return; x[f] = t.value; tocado(d);
       if (esSel) repintar(); else refrescar(); return;
     }
-    if (t.dataset.fx) { const fx = buscaEn(d.factores, t.dataset.fx); if (!fx) return; fx[f] = t.value; tocado(d); refrescar(fx.id); return; }
+    if (t.dataset.fx) { const fx = buscaEn(d.factores, t.dataset.fx); if (!fx) return; setPath(fx, f, t.value); tocado(d); refrescar(fx.id); return; }
+    if (t.dataset.es) { const e = buscaEn(d.estrategias, t.dataset.es); if (!e) return; setPath(e, f, t.value); tocado(d); refrescar(); return; }
+    if (t.dataset.ac) { const r = buscaAccion(d, t.dataset.ac); if (!r) return; setPath(r.x, f, t.value); tocado(d); refrescar(); return; }
+    if (t.dataset.me) { const r = buscaMedida(d, t.dataset.me); if (!r) return; r.m[f] = t.value; tocado(d); refrescar(); return; }
+    if (t.dataset.cp) { const x = d.control[t.dataset.cp][Number(t.dataset.i)]; if (!x) return; x[f] = t.value; tocado(d); refrescar(); return; }
+    if (t.dataset.ch) { const x = d.control.historial[Number(t.dataset.ch)]; if (!x) return; x[f] = t.value; tocado(d); return; }
+    if (t.dataset.actSel === "usar-ind") {
+      const r = buscaAccion(d, t.dataset.acInd), y = indImportados && indImportados[Number(t.value)]; if (!r || !y) return;
+      const hacer = () => { Object.assign(r.x.indicador, y); indPara = null; tocado(d); repintar(); toast("Indicador copiado. Revisa el estándar.", 3000); };
+      if (lleno(r.x.indicador.nombre)) confirmar("<p>Se sustituirá el indicador que has escrito por el de la app Indicadores.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
+      return;
+    }
     if (t.dataset.k) { setPath(d, t.dataset.k, t.value); tocado(d); refrescar(); }
   });
   view.addEventListener("toggle", e => {
@@ -1046,6 +1320,73 @@
       }, { peligro: false });
     }
     else if (act === "excel" && d) exportarExcel(d);
+    // --- Paso 7 · estrategias ---
+    else if (act === "es-proponer" && d) {
+      const P = L.estrategiasPropuestas(d); if (!P.length) return;
+      P.forEach(p => d.estrategias.push(Object.assign(L.nuevaEstrategia(genId(), p.tipo, L.siguienteNumEst(d)), { texto: p.texto, factores: p.factores, origen: p.origen })));
+      tocado(d); repintar(); toast(`Propuestas ${plural(P.length, "estrategia", "estrategias")}. Reescríbelas a tu manera y puntúa su impacto y su viabilidad.`, 4500);
+    }
+    else if (act === "es-add" && d) {
+      const e = L.nuevaEstrategia(genId(), "C", L.siguienteNumEst(d)); d.estrategias.push(e); tocado(d); repintar();
+      const el = $(`[data-es="${e.id}"][data-f="texto"]`); if (el) { el.focus(); el.scrollIntoView({ block: "center" }); }
+    }
+    else if (act === "es-del" && d) {
+      const e = buscaEn(d.estrategias, id); if (!e) return;
+      const hacer = () => { d.estrategias = d.estrategias.filter(x => x.id !== id); tocado(d); repintar(); };
+      if (lleno(e.texto) || e.acciones.length) confirmar(`<p>Se quitará ${L.codigoEst(e)} «${esc(L.corto(e.texto || "sin escribir", 60))}»${e.acciones.length ? ` con sus ${plural(e.acciones.length, "acción", "acciones")} del plan` : ""}.</p>`, "Quitar", hacer); else hacer();
+    }
+    else if (act === "es-tipo" && d) { const e = buscaEn(d.estrategias, id); if (!e) return; e.tipo = b.dataset.v; tocado(d); repintar(); }
+    else if (act === "es-fac" && d) {
+      const e = buscaEn(d.estrategias, id); if (!e) return;
+      const i = e.factores.indexOf(b.dataset.fx); if (i < 0) e.factores.push(b.dataset.fx); else e.factores.splice(i, 1);
+      tocado(d); repintar(); const det = $(`.est[data-eid="${e.id}"] details`); if (det) det.open = true;
+    }
+    else if (act === "es-punt" && d) { const e = buscaEn(d.estrategias, id); if (!e) return; e[b.dataset.f] = e[b.dataset.f] === b.dataset.v ? "" : b.dataset.v; tocado(d); repintar(); }
+    else if (act === "es-elegir" && d) {
+      const e = buscaEn(d.estrategias, id); if (!e) return; e.elegida = b.dataset.v; tocado(d); repintar();
+      if (e.elegida && !lleno(e.motivo)) { const el = $(`[data-es="${e.id}"][data-f="motivo"]`); if (el) el.focus(); }
+    }
+    else if (act === "cand" && d) {
+      const f = buscaEn(d.factores, id); if (!f) return;
+      f.candidato.destino = b.dataset.v;
+      if (f.candidato.destino && !lleno(f.candidato.proceso)) f.candidato.proceso = L.corto(f.texto, 120);
+      tocado(d); repintar();
+    }
+    else if (act === "llevar" && d) llevarA(d, buscaEn(d.factores, id));
+    // --- Paso 8 · plan ---
+    else if (act === "ac-add" && d) {
+      const e = buscaEn(d.estrategias, id); if (!e) return;
+      const x = L.nuevaAccion(genId()); e.acciones.push(x); tocado(d); repintar();
+      const el = $(`[data-ac="${x.id}"][data-f="que"]`); if (el) { el.focus(); el.scrollIntoView({ block: "center" }); }
+    }
+    else if (act === "ac-del" && d) {
+      const r = buscaAccion(d, id); if (!r) return;
+      const hacer = () => { r.e.acciones = r.e.acciones.filter(x => x.id !== id); tocado(d); repintar(); };
+      if (lleno(r.x.que) || r.x.seguimiento.length) confirmar(`<p>Se quitará la acción «${esc(L.corto(r.x.que || "sin escribir", 60))}»${r.x.seguimiento.length ? " con sus medidas de seguimiento" : ""}.</p>`, "Quitar", hacer); else hacer();
+    }
+    else if (act === "ac-estado" && d) { const r = buscaAccion(d, id); if (!r) return; r.x.estado = b.dataset.v; tocado(d); repintar(); }
+    else if (act === "me-add" && d) { const r = buscaAccion(d, id); if (!r) return; r.x.seguimiento.push(Object.assign(L.nuevaMedida(genId()), { fecha: hoyIso() })); tocado(d); repintar(); }
+    else if (act === "me-del" && d) { const r = buscaMedida(d, id); if (!r) return; r.x.seguimiento = r.x.seguimiento.filter(m => m.id !== id); tocado(d); repintar(); }
+    else if (act === "ind-traer" && d) {
+      let l = null; try { l = indicadoresDe(JSON.parse(leer("indicadores-datos") || "null")); } catch (er) { /* */ }
+      indPara = id;
+      if (l && l.length) { indImportados = l; const z = $(`[data-zind="${id}"]`), r = buscaAccion(d, id); if (z && r) z.innerHTML = zonaInd(r.x); }
+      else confirmar("<p>No hay indicadores de la app <b>Indicadores</b> en este navegador.</p><p>Si los tienes en otro dispositivo, carga su copia de seguridad (.json).</p>", "Cargar una copia", () => $("#input-ind").click(), { titulo: "Traer de Indicadores", peligro: false });
+    }
+    else if (act === "sug-concl" && d) {
+      const s = L.conclusionesSugeridas(d); if (!s) { toast("Aún no hay datos suficientes para proponer un texto.", 3000); return; }
+      const hacer = () => { d.conclusiones = s; tocado(d); repintar(); };
+      if (lleno(d.conclusiones)) confirmar("<p>Se sustituirá lo que has escrito por el texto propuesto.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
+    }
+    else if (act === "cp-add" && d) { d.control[b.dataset.k].push(L.nuevaPersona()); tocado(d); repintar(); }
+    else if (act === "cp-del" && d) { d.control[b.dataset.k].splice(Number(b.dataset.i), 1); tocado(d); repintar(); }
+    else if (act === "ch-add" && d) {
+      const H = d.control.historial, ult = H.length ? parseInt(H[H.length - 1].edicion, 10) : -1;
+      H.push({ edicion: String((Number.isFinite(ult) ? ult : -1) + 1).padStart(2, "0"), fecha: hoyIso(), cambio: "" }); tocado(d); repintar();
+    }
+    else if (act === "ch-del" && d) { d.control.historial.splice(Number(b.dataset.i), 1); tocado(d); repintar(); }
+    else if (act === "doc-ver") irInforme(b.dataset.doc);
+    else if (act === "doc-word" && d) descargarWord(d, b.dataset.doc);
     else if (act === "pegar-abrir") { pegarAbierto = true; repintar(); const el = $("#pegar-txt"); if (el) el.focus(); }
     else if (act === "pegar-cerrar") { pegarAbierto = false; repintar(); }
     else if (act === "pegar-ok" && d) {
@@ -1065,6 +1406,17 @@
   view.addEventListener("change", e => { if (e.target.id === "pegar-tipo") pegarVista(); });
   $("#banner-copiar").addEventListener("click", copiarAMisDatos);
   $("#input-importar").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) importar(f); e.target.value = ""; });
+  // Copia de seguridad de la app Indicadores (para «Traer de Indicadores» desde otro dispositivo)
+  $("#input-ind").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let l = null; try { l = indicadoresDe(JSON.parse(fr.result)); } catch (er) { /* */ }
+      if (!l || !l.length) { toast("Ese archivo no es una copia de la app Indicadores (o no tiene indicadores con nombre).", 4500); return; }
+      indImportados = l; if (actual) repintar(); toast(`Cargados ${plural(l.length, "indicador", "indicadores")}. Elige el que quieras usar.`, 3500);
+    };
+    fr.readAsText(f);
+  });
 
   // Imprimir: abrir los desplegables y restaurarlos después
   let cerrados = [];

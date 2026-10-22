@@ -2,13 +2,15 @@
 
 PWA estática (HTML/CSS/JS puro, sin dependencias ni CDN, funciona sin conexión) para hacer, paso a paso y aprendiendo mientras se hace, el **análisis DAFO** (debilidades, amenazas, fortalezas y oportunidades) de un servicio, una unidad o un proyecto sanitario y, a partir de él, el **análisis CAME** (corregir, afrontar, mantener, explotar) y un plan de acción con indicadores.
 
-Ocho pasos: qué se analiza y para qué; fuentes de información; mirar hacia dentro (fortalezas y debilidades); mirar hacia fuera (oportunidades y amenazas); priorizar; cruzar los factores; estrategias CAME; plan de acción. En la versión actual están disponibles los pasos 1 a 4.
+Ocho pasos: qué se analiza y para qué; fuentes de información; mirar hacia dentro (fortalezas y debilidades); mirar hacia fuera (oportunidades y amenazas); priorizar; cruzar los factores; estrategias CAME; plan de acción. Están disponibles los ocho pasos.
 
 - Preguntas guía por área (análisis interno) y por ámbito del entorno (PESTEL adaptado a sanidad).
 - Cada factor con el dato que lo respalda, su importancia y, en lo externo, su probabilidad y su peso.
 - Avisos didácticos de las trampas más habituales: algo externo escrito como interno (o al revés), una solución escrita como factor, factores vagos, repetidos o sin datos.
 - Pegar los factores desde Excel, Calc o Word.
-- Matriz DAFO imprimible y en PDF.
+- Prioridad por cuadrante, matriz cruzada con orientación estratégica, estrategias CAME elegidas por impacto y viabilidad, y plan de acción con indicadores y seguimiento.
+- Informe DAFO · CAME y resumen para la Dirección en Word y PDF, lámina DAFO y Excel.
+- Paquete de intercambio para las otras apps del ecosistema (factores, estrategias y candidatos a AMFE, Mapa de Riesgos o auditoría).
 - **Aprende** (siete temas), **glosario** y un **ejemplo completo** (una UGC de Atención Primaria inventada que prepara su acuerdo de gestión).
 
 Los datos se guardan solo en el dispositivo; para trabajar en equipo se comparte la copia de seguridad.
