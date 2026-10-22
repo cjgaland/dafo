@@ -1402,3 +1402,63 @@ body.modo-reunion table.mini { font-size: 16px; }
 @media (max-width: 480px) { .dafo-m { gap: 4px; } .dm-c { padding: 8px 6px 6px; } .dm-l { font-size: 12px; } .dm-l li { grid-template-columns: auto minmax(0, 1fr); } .dm-peso { display: none; } }
 @media print { .dm-c, .cuad, .fx { break-inside: avoid; } }
 .tabla-fx td:nth-child(2) { min-width: 180px; }
+/* ---------- Paso 5 · Priorizar ---------- */
+.pf.q-F, .pf.q-D, .pf.q-O, .pf.q-A { border-left-color: var(--qc); }
+.pf--on { box-shadow: 0 0 0 2px var(--qc-dim), var(--shadow-sm); }
+.badge--prio { background: var(--cyan); border-color: var(--cyan); color: #fff; }
+:root[data-tema="oscuro"] .badge--prio { color: #1e0b3d; }
+.badge--fuera { color: var(--text-3); }
+.grupo-t.q-F, .grupo-t.q-D, .grupo-t.q-O, .grupo-t.q-A { color: var(--qc); }
+.grupo-t .cuad-letra { width: 24px; height: 24px; font-size: 13px; }
+.pf .field { margin: 6px 0; }
+.dm-l li.dm-fuera { opacity: .42; }
+.dm-l li.dm-fuera .dm-peso { border-color: var(--border-lite); color: var(--text-3); }
+/* ---------- Paso 6 · Matriz cruzada ---------- */
+.cz-wrap { margin: 10px 0 4px; }
+.cz-t { border-collapse: separate; border-spacing: 3px; margin: 0 auto; }
+.cz-t th, .cz-t td { padding: 0; text-align: center; }
+.cz-h span { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 26px; padding: 0 5px; border-radius: 7px; background: var(--qc); color: #fff; font-size: 12.5px; font-weight: 800; cursor: help; }
+:root[data-tema="oscuro"] .cz-h span { color: #0d1b2a; }
+.cz { width: 38px; height: 34px; border-radius: 7px; border: 1px solid var(--border-lite); background: var(--bg-2); color: var(--text-1); font: 800 15px var(--font); display: inline-grid; place-items: center; padding: 0; }
+button.cz:hover { border-color: var(--cyan); }
+.cz--vacio { color: var(--text-3); background: var(--bg-3); border-style: dashed; }
+.cz--0 { color: var(--text-3); }
+.cz--1 { background: rgba(109,40,217,.12); }
+.cz--2 { background: rgba(109,40,217,.32); }
+.cz--3 { background: #6d28d9; border-color: #6d28d9; color: #fff; }
+:root[data-tema="oscuro"] .cz--1 { background: rgba(167,139,250,.18); } :root[data-tema="oscuro"] .cz--2 { background: rgba(167,139,250,.42); }
+:root[data-tema="oscuro"] .cz--3 { background: #a78bfa; border-color: #a78bfa; color: #1e0b3d; }
+:root body.ver-informe .cz--1 { background: #ede9fe; } :root body.ver-informe .cz--2 { background: #c4b5fd; } :root body.ver-informe .cz--3 { background: #6d28d9; color: #fff; }
+.cz-sep { padding-left: 8px !important; }
+.cz-fsep th, .cz-fsep td { padding-top: 8px !important; }
+.cz-m { font-size: 12px; font-weight: 800; color: var(--text-2); min-width: 40px; }
+.cz-ley { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin: 8px 0; font-size: 12.5px; color: var(--text-2); }
+@media (min-width: 720px) { .cz-ley { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cz-ley .fx-cod, .cz-fila .fx-cod, .cz-col .fx-cod, .llaves .fx-cod { min-width: 30px; height: 21px; font-size: 11.5px; margin-right: 4px; }
+.cz-bloque { margin: 16px 0; }
+.cz-preg { display: block; font-size: 13.5px; font-weight: 600; color: var(--text-2); }
+.cz-grupo { margin: 8px 0; padding: 8px 10px; border-radius: var(--radius-lg); border: 1px solid var(--border); border-left: 5px solid var(--qc); background: var(--bg-2); }
+.cz-fila { margin: 0 0 6px; font-size: 14.5px; }
+.cz-par { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; padding: 6px 0; border-top: 1px dashed var(--border); font-size: 13.5px; }
+.cz-col { flex: 1 1 200px; min-width: 0; }
+.seg--cz { flex: none; }
+.seg--cz button { min-width: 36px; }
+/* Resultado: orientación, llaves y cruces fuertes */
+.or-barras { display: grid; gap: 6px; margin: 4px 0 8px; }
+.or-fila { display: grid; grid-template-columns: 34px 120px minmax(0, 1fr) 40px; gap: 8px; align-items: center; font-size: 14px; }
+.or-k { font-weight: 800; color: var(--text-2); }
+.or-n { display: grid; font-weight: 700; line-height: 1.15; } .or-n small { font-weight: 500; color: var(--text-3); font-size: 11.5px; }
+.or-barra { height: 14px; border-radius: 99px; background: var(--bg-3); overflow: hidden; }
+.or-barra i { display: block; height: 100%; border-radius: 99px; background: var(--border-lite); }
+.or-fila--sel .or-barra i { background: var(--cyan); }
+.or-fila--sel .or-k, .or-fila--sel .or-v { color: var(--cyan); }
+.or-v { text-align: right; }
+@media (max-width: 400px) { .or-fila { grid-template-columns: 30px 92px minmax(0, 1fr) 34px; gap: 6px; font-size: 13px; } }
+.llaves, .fuertes { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.llaves li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.fuertes li { display: grid; gap: 2px; padding: 6px 10px; border-radius: var(--radius); background: var(--cyan-dim); }
+.fuertes li span { font-size: 12.5px; color: var(--text-2); }
+.fz-t { margin: 10px 0 0; font-size: 14px; }
+@media print { .cz-ley { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cz { width: 28px; height: 24px; font-size: 12px; } }
+.toolbar .seg button { white-space: nowrap; }
+.seg--mini[aria-label="Factores prioritarios por cuadrante"] { max-width: 460px; }

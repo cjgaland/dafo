@@ -14,8 +14,16 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.01";
+  const APP_VERSION = "2026.02";
   const NOVEDADES = [
+    { version: "2026.02", fecha: "Octubre 2026", titulo: "Priorizar y cruzar los factores", cambios: [
+      "Paso 5 · Quedarse con lo importante: los factores de más peso de cada cuadrante (5 por defecto, de 3 a 10), con aviso de empates en el corte. Se puede añadir o quitar cualquiera a mano, escribiendo el motivo.",
+      "La matriz DAFO destaca los factores prioritarios.",
+      "Paso 6 · Cruzar los factores: matriz cruzada de 0 a 3 entre fortalezas y debilidades y oportunidades y amenazas, en tabla o pregunta a pregunta (mejor en el móvil).",
+      "Orientación estratégica (ofensiva, defensiva, de reorientación o de supervivencia), factores llave y cruces fuertes con una idea de estrategia de partida.",
+      "Excel con los factores, la matriz DAFO, la matriz cruzada, las fuentes y la ficha del análisis.",
+      "El ejemplo de la UGC trae ya su priorización y su matriz cruzada completa.",
+      "Preparado el intercambio con las otras apps del ecosistema (AMFE, Mapa de Riesgos, Auditorías)."] },
     { version: "2026.01", fecha: "Octubre 2026", titulo: "Primera versión: mirar hacia dentro y hacia fuera", cambios: [
       "Asistente en 8 pasos con «Tu siguiente paso» en la portada. En esta versión están disponibles los pasos 1 a 4.",
       "Qué se analiza y para qué: objeto, finalidad (acuerdo de gestión, acreditación, plan estratégico, proyecto…), horizonte, alcance, misión y visión, con textos propuestos.",
@@ -25,7 +33,7 @@
       "Pegar los factores desde Excel, Calc o Word.",
       "Matriz DAFO imprimible y en PDF, ejemplo completo de una UGC de Atención Primaria, Aprende (7 temas), glosario y copia de seguridad."] }
   ];
-  const ENTREGA = 1;   // pasos ya construidos (ver L.PASOS[].entrega)
+  const ENTREGA = 2;   // pasos ya construidos (ver L.PASOS[].entrega)
 
   // ---------- Utilidades ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -43,7 +51,7 @@
   const escribir = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
 
   // ---------- Datos (solo en este dispositivo) ----------
-  const KEY_DATOS = "dafo-datos";
+  const KEY_DATOS = "dafo-datos", KEY_INTERCAMBIO = "dafo-intercambio";
   let datos = { dafos: [], ultimaCopia: null };
   (function cargar() {
     const crudo = leer(KEY_DATOS); if (!crudo) return;
@@ -66,6 +74,8 @@
     clearTimeout(tGuardar);
     const fn = () => {
       const ok = escribir(KEY_DATOS, JSON.stringify({ app: "dafo", v: L.VERSION_DATOS, ultimaCopia: datosUsuario.ultimaCopia, dafos: datosUsuario.dafos }));
+      // Paquete con forma fija para las otras apps (nunca lleva los ejemplos)
+      if (ok) { try { escribir(KEY_INTERCAMBIO, JSON.stringify(L.paqueteIntercambio(datosUsuario.dafos, APP_VERSION, hoy()))); } catch (e) { /* */ } }
       if (!ok && !avisoSinEspacio) { avisoSinEspacio = true; toast("No se ha podido guardar en este navegador (¿modo privado o sin espacio?). Haz una copia de seguridad.", 6000); }
     };
     if (inmediato) fn(); else tGuardar = setTimeout(fn, 250);
@@ -254,8 +264,8 @@
     const tema = { 5: 5, 6: 6, 7: 6, 8: 7 }[p.n];
     return `<p class="page-lead">${p.que}</p>
       <div class="placeholder-box"><p><b>Este paso llegará en una próxima versión.</b></p>
-      <p>${p.n <= 6 ? "Mientras, en la matriz DAFO tienes los factores de cada cuadrante ordenados por su peso." : "Mientras, puedes repasar cómo se hace en «Aprende»."}</p>
-      <div class="toolbar" style="justify-content:center"><a class="btn" href="#/aprende/${tema}">Repasarlo en «Aprende»</a><a class="btn btn--primary" href="#/dafo/${d.id}/4?informe=1">Ver la matriz DAFO →</a></div></div>`;
+      <p>Mientras, en el paso 6 tienes la orientación estratégica y los cruces fuertes, con una idea de estrategia de partida para cada uno.</p>
+      <div class="toolbar" style="justify-content:center"><a class="btn" href="#/aprende/${tema}">Repasarlo en «Aprende»</a><a class="btn btn--primary" href="#/dafo/${d.id}/6">Ir al paso 6 →</a></div></div>`;
   }
 
   // ---------- Paso 1 · Qué analizamos y para qué ----------
@@ -412,57 +422,156 @@
           ${trampa("Una oportunidad que nadie va a aprovechar es solo un deseo; y «nuestro equipo está poco formado» no es una amenaza aunque preocupe: depende de vosotros.")}`)}`;
     return `${ayuda}
       ${guiaHtml(n)}
-      <div class="toolbar no-print"><button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>${d.factores.length ? `<button class="btn" data-act="informe">Ver matriz DAFO / PDF</button>` : ""}</div>
+      <div class="toolbar no-print"><button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>${d.factores.length ? `<button class="btn" data-act="informe">Ver matriz DAFO / PDF</button><button class="btn" data-act="excel">⬇ Excel</button>` : ""}</div>
       ${pegarAbierto ? pegarHtml(n) : ""}
       <div data-zona="avisos">${avisosGenerales(d, n)}</div>
       <div class="cuad-2">${columna(d, t1)}${columna(d, t2)}</div>
-      ${n === 4 ? `<h2 class="sec-t">Matriz DAFO</h2><p class="page-lead">Los cuatro cuadrantes, cada uno ordenado por su peso. En la próxima versión os quedaréis con los más importantes y los cruzaréis para sacar las estrategias.</p>
+      ${n === 4 ? `<h2 class="sec-t">Matriz DAFO</h2><p class="page-lead">Los cuatro cuadrantes, cada uno ordenado por su peso. En el paso 5 os quedaréis con los más importantes y en el 6 los cruzaréis.</p>
         <div data-zona="matriz">${matrizHtml(d)}</div>` : ""}`;
   }
   const paso3 = d => pasoCuadrantes(d, 3);
   const paso4 = d => pasoCuadrantes(d, 4);
-  const RENDER = { 1: paso1, 2: paso2, 3: paso3, 4: paso4 };
+  // ---------- Paso 5 · Quedarse con lo importante ----------
+  function estadoPrio(e) {
+    if (!e) return "";
+    if (e.por === "manual") return e.prio ? `<span class="badge badge--prio">Añadido a mano</span>` : `<span class="badge">Quitado a mano</span>`;
+    return e.prio ? `<span class="badge badge--prio">Prioritario</span>` : `<span class="badge badge--fuera">Fuera</span>`;
+  }
+  function factorPrio(d, f, m) {
+    const e = m[f.id], btn = (v, t) => `<button type="button" class="pf-btn${(f.manual || "") === v ? " on" : ""}" data-act="fx-manual" data-id="${f.id}" data-v="${v}" aria-pressed="${(f.manual || "") === v}">${t}</button>`;
+    return `<div class="pf q-${f.tipo}${e.prio ? " pf--on" : ""}" data-fid="${f.id}">
+      <div class="pf-cab">${codBadge(f)}<span class="pf-txt"><b>${esc(f.texto)}</b>${lleno(f.evidencia) ? `<span>${esc(L.corto(f.evidencia, 110))}</span>` : `<span class="falta">Sin dato que lo respalde</span>`}</span>
+        <span class="pf-badges">${pesoBadge(f)}${e.puesto ? `<span class="badge">${e.puesto}.º</span>` : ""}${estadoPrio(e)}</span></div>
+      <div class="pf-acc no-print">${btn("", "Según el peso")}${btn("si", "Sí, entra")}${btn("no", "No entra")}</div>
+      ${f.manual ? campo(f, "motivo", "Motivo de la decisión", { bind: bx(f, "motivo"), area: true, ph: f.manual === "si" ? "p. ej. Aunque pesa poco, es requisito de la acreditación" : "p. ej. Ya se está corrigiendo con un proyecto en marcha", extra: `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="sug-motivo" data-id="${f.id}">✎ Proponer el dato del motivo</button></div>` }) : ""}
+      <div data-zav="${f.id}">${avisosFactor(d, 5, f.id)}</div>
+    </div>`;
+  }
+  function paso5(d) {
+    const m = L.prioridad(d), N = L.nPrioridad(d);
+    return `
+      ${idea("Una lluvia de ideas da muchos factores, pero <b>no se puede trabajar con todos</b>. Quedaos con los que más pesan de cada cuadrante: lo habitual, <b>unos 5</b>.")}
+      ${facil(`<p>La app ordena cada cuadrante por su <b>peso</b> (importancia en los internos; importancia × probabilidad en los externos) y propone como prioritarios los primeros. El equipo puede <b>añadir o quitar a mano</b> cualquier factor, siempre escribiendo el motivo.</p>
+        <p>Los prioritarios son los que se cruzan en el paso 6 y de los que saldrán las estrategias.</p>
+        ${trampa("Si os quedáis con todo, la matriz cruzada se hace eterna y nada destaca. Y si quitáis a mano lo que más pesa, explicad por qué: quien lea el análisis lo preguntará.")}`)}
+      <div class="card no-print"><h2 class="sub-h">Cuántos por cuadrante</h2>
+        <div class="seg seg--mini" role="group" aria-label="Factores prioritarios por cuadrante">${[3, 4, 5, 6, 7, 8, 10].map(v => `<button type="button" class="${v === N ? "active" : ""}" data-act="prio-n" data-v="${v}">${v}</button>`).join("")}</div>
+        <p class="field-sub">Entran los ${N} de más peso de cada cuadrante. Con ${N} por cuadrante, la matriz cruzada tendrá hasta ${N * 2 * N * 2} casillas.</p></div>
+      <div data-zona="avisos">${avisosGenerales(d, 5)}</div>
+      <h2 class="sec-t">Matriz DAFO de los prioritarios</h2>
+      <div data-zona="matriz">${matrizHtml(d, true)}</div>
+      ${L.TIPOS.map(t => { const l = L.delTipo(d, t).filter(f => lleno(f.texto)); return `<section class="grupo-sub"><h3 class="grupo-t q-${t}"><span class="cuad-letra">${t}</span>${Q[t].nom} <span class="contador">${l.filter(f => L.esPrio(m, f)).length} de ${l.length}</span></h3>
+        <div class="pf-lista">${l.map(f => factorPrio(d, f, m)).join("") || `<p class="placeholder-box">No hay ${Q[t].nom.toLowerCase()}. <a href="#/dafo/${d.id}/${L.esInterno(t) ? 3 : 4}">Escríbelas en el paso ${L.esInterno(t) ? 3 : 4}</a>.</p>`}</div></section>`; }).join("")}
+      <div class="toolbar no-print sep-arriba"><button class="btn" data-act="excel">⬇ Excel</button><button class="btn" data-act="informe">Ver análisis / PDF</button></div>`;
+  }
+
+  // ---------- Paso 6 · Cruzar los factores ----------
+  const KEY_VISTA_CRUCE = "dafo-vista-cruce";
+  const vistaCruce = () => leer(KEY_VISTA_CRUCE) || (window.innerWidth >= 720 ? "tabla" : "lista");
+  const celdaCruce = (d, f, g, ver) => { const v = L.valorCruce(d, f, g); if (ver) return `<span class="cz${v === null ? " cz--vacio" : " cz--" + v}">${v === null ? "·" : v}</span>`; return `<button type="button" class="cz${v === null ? " cz--vacio" : " cz--" + v}" data-act="cruce" data-f="${f.id}" data-g="${g.id}" title="${esc(L.BLOQUES[L.bloqueDe(f, g)].preg + " " + L.codigo(f) + " × " + L.codigo(g))}" aria-label="${L.codigo(f)} por ${L.codigo(g)}: ${v === null ? "sin valorar" : v}">${v === null ? "·" : v}</button>`; };
+  const mediaDe = (r, f) => { const x = r.porFactor.find(y => y.f === f); return x ? String(x.media).replace(".", ",") : ""; };
+  function tablaCruce(d, r, ver) {
+    const E = r.ejes, cols = [...E.O, ...E.A];
+    const cab = g => `<th class="cz-h q-${g.tipo}${g === E.A[0] ? " cz-sep" : ""}" title="${esc(g.texto)}"><span>${L.codigo(g)}</span></th>`;
+    const fila = f => `<tr class="${f === E.D[0] ? "cz-fsep" : ""}"><th class="cz-h q-${f.tipo}" title="${esc(f.texto)}"><span>${L.codigo(f)}</span></th>${cols.map(g => `<td class="${g === E.A[0] ? "cz-sep" : ""}">${celdaCruce(d, f, g, ver)}</td>`).join("")}<td class="cz-m" data-zmf="${f.id}">${mediaDe(r, f)}</td></tr>`;
+    return `<div class="table-wrap cz-wrap"><table class="cz-t" aria-label="Matriz cruzada">
+      <thead><tr><th class="cz-esq"></th>${cols.map(cab).join("")}<th class="cz-m">Media</th></tr></thead>
+      <tbody>${[...E.F, ...E.D].map(fila).join("")}<tr class="cz-fsep"><th class="cz-m">Media</th>${cols.map(g => `<td class="cz-m${g === E.A[0] ? " cz-sep" : ""}" data-zmf="${g.id}">${mediaDe(r, g)}</td>`).join("")}<td></td></tr></tbody></table></div>
+      <p class="field-sub no-print">Toca una casilla para cambiar su valor: · (sin valorar) → 0 → 1 → 2 → 3. Pasa el ratón por un código para ver el factor.</p>
+      <div class="cz-ley">${[...E.F, ...E.D, ...E.O, ...E.A].map(f => `<span>${codBadge(f)} ${esc(f.texto)}</span>`).join("")}</div>`;
+  }
+  function listaCruce(d, r) {
+    const E = r.ejes;
+    return L.ORDEN_BLOQUES.map(k => { const B = L.BLOQUES[k];
+      return `<section class="cz-bloque"><h3 class="sub-h">${k} · ${B.verbo} <span class="cz-preg">${esc(B.preg)}</span></h3>
+        ${E[B.fila].map(f => `<div class="cz-grupo q-${f.tipo}"><p class="cz-fila">${codBadge(f)} <b>${esc(f.texto)}</b></p>
+          ${E[B.col].map(g => { const v = L.valorCruce(d, f, g); return `<div class="cz-par"><span class="cz-col">${codBadge(g)} ${esc(g.texto)}</span>
+            <div class="seg seg--mini seg--cz" role="group" aria-label="${L.codigo(f)} por ${L.codigo(g)}">${[0, 1, 2, 3].map(i => `<button type="button" class="${v === i ? "active" : ""}" data-act="cruce-v" data-f="${f.id}" data-g="${g.id}" data-v="${i}" title="${L.ESC_CRUCE[i]}">${i}</button>`).join("")}</div></div>`; }).join("")}
+        </div>`).join("")}</section>`; }).join("");
+  }
+  function resultadoHtml(d) {
+    const r = L.resultadoCruces(d);
+    if (!r.total) return "";
+    const max = Math.max(1, ...L.ORDEN_BLOQUES.map(k => r.bloques[k].media));
+    const barras = L.ORDEN_BLOQUES.map(k => { const b = r.bloques[k], B = L.BLOQUES[k];
+      return `<div class="or-fila${k === r.orientacion ? " or-fila--sel" : ""}"><span class="or-k">${k}</span><span class="or-n">${B.verbo}<small>${B.nom}</small></span><span class="or-barra"><i style="width:${Math.round(b.media / 3 * 100)}%"></i></span><b class="or-v">${String(b.media).replace(".", ",")}</b></div>`; }).join("");
+    const fuertes = r.fuertes;
+    return `<div class="card or-card"><h3 class="sub-h">Orientación estratégica</h3>
+        <div class="or-barras">${barras}</div>
+        <p class="field-sub">Media de cada bloque, de 0 a 3 (las casillas sin valorar cuentan como 0). ${r.listo ? "" : `Llevas ${r.rellenas} de ${r.total} casillas.`}</p>
+        ${r.orientacion ? practica(`<b>Orientación ${esc(L.BLOQUES[r.orientacion].nom.toLowerCase())} (${r.orientacion}).</b> ${esc(L.BLOQUES[r.orientacion].texto)} Es una ayuda, no una orden: también conviene mantener las fortalezas y vigilar las amenazas.`) : `<div class="note">ℹ La orientación aparecerá cuando estén valoradas todas las casillas.</div>`}
+      </div>
+      ${r.llaves.length ? `<div class="card"><h3 class="sub-h">Factores llave</h3><p class="field-sub">Los que más se relacionan con el resto: actuar sobre ellos mueve varias estrategias a la vez.</p>
+        <ul class="llaves">${r.llaves.map(x => `<li>${codBadge(x.f)} <span>${esc(x.f.texto)}</span> <span class="badge">media ${String(x.media).replace(".", ",")}</span></li>`).join("")}</ul></div>` : ""}
+      ${fuertes.length ? `<div class="card"><h3 class="sub-h">Cruces fuertes (3) <span class="contador">${fuertes.length}</span></h3><p class="field-sub">De aquí saldrán las estrategias CAME propuestas en el paso 7 (próxima versión). Por ahora, una idea de partida:</p>
+        ${L.ORDEN_BLOQUES.filter(k => fuertes.some(x => x.bloque === k)).map(k => `<p class="fz-t"><b>${k} · ${L.BLOQUES[k].verbo}</b></p><ul class="fuertes">${fuertes.filter(x => x.bloque === k).map(x => `<li><b>${esc(L.estrategiaPropuesta(x.fila, x.col))}</b><span>${L.codigo(x.fila)}: ${esc(L.corto(x.fila.texto, 70))} · ${L.codigo(x.col)}: ${esc(L.corto(x.col.texto, 70))}</span></li>`).join("")}</ul>`).join("")}</div>` : ""}`;
+  }
+  function paso6(d) {
+    const r = L.resultadoCruces(d), faltan = L.TIPOS.filter(t => !r.ejes[t].length), vista = vistaCruce();
+    const cabecera = `
+      ${idea("Cruzad lo de dentro con lo de fuera: <b>cada cruce sugiere un tipo de estrategia</b>. Los cruces más fuertes serán vuestras estrategias CAME.")}
+      ${facil(`<div class="table-wrap"><table class="mini"><tr><th></th><th>Oportunidades</th><th>Amenazas</th></tr>
+          <tr><th>Fortalezas</th><td><b>FO · Explotar</b><br>${esc(L.BLOQUES.FO.preg)}</td><td><b>FA · Mantener</b><br>${esc(L.BLOQUES.FA.preg)}</td></tr>
+          <tr><th>Debilidades</th><td><b>DO · Corregir</b><br>${esc(L.BLOQUES.DO.preg)}</td><td><b>DA · Afrontar</b><br>${esc(L.BLOQUES.DA.preg)}</td></tr></table></div>
+        <p>Cada casilla se valora de <b>0</b> (sin relación) a <b>3</b> (fuerte). La media de cada bloque dice la <b>orientación</b> de la unidad: ofensiva (FO), defensiva (FA), de reorientación (DO) o de supervivencia (DA).</p>
+        ${trampa("Si todo lleva un 3, nada destaca. Reservad el 3 para los cruces de verdad fuertes, y no olvidéis el 0: también es una respuesta.")}`)}`;
+    if (faltan.length) return `${cabecera}<div data-zona="avisos">${avisosGenerales(d, 6)}</div>
+      <div class="placeholder-box"><p>Para cruzar hacen falta factores prioritarios en los cuatro cuadrantes. <a href="#/dafo/${d.id}/5">Vuelve al paso 5</a>.</p></div>`;
+    return `${cabecera}
+      <div class="toolbar no-print"><div class="seg seg--mini" role="group" aria-label="Forma de ver la matriz"><button type="button" class="${vista === "tabla" ? "active" : ""}" data-act="cruce-vista" data-v="tabla">Tabla</button><button type="button" class="${vista === "lista" ? "active" : ""}" data-act="cruce-vista" data-v="lista">Pregunta a pregunta</button></div>
+        ${r.rellenas < r.total ? `<button class="btn" data-act="cruce-ceros">Poner 0 en las vacías</button>` : ""}<button class="btn" data-act="excel">⬇ Excel</button><button class="btn" data-act="informe">Ver análisis / PDF</button></div>
+      <p class="res-linea" data-zona="progcruce">${progCruce(r)}</p>
+      <div data-zona="avisos">${avisosGenerales(d, 6)}</div>
+      ${vista === "tabla" ? tablaCruce(d, r) : listaCruce(d, r)}
+      <h2 class="sec-t">Resultado</h2>
+      <div data-zona="resultado">${resultadoHtml(d)}</div>`;
+  }
+  const progCruce = r => `<span class="badge">${r.rellenas} de ${r.total} casillas valoradas</span>${r.orientacion ? `<span class="badge badge--prio">Orientación ${r.orientacion}</span>` : ""}`;
+  const RENDER = { 1: paso1, 2: paso2, 3: paso3, 4: paso4, 5: paso5, 6: paso6 };
 
   // ---------- Matriz DAFO (2 × 2) ----------
-  function celdaMatriz(d, m, t) {
+  // soloPrio: con la entrega 2, los prioritarios destacan y el resto se ve atenuado
+  function celdaMatriz(d, m, t, pm) {
     const l = m[t];
     return `<div class="dm-c q-${t}"><h3 class="dm-t"><span class="cuad-letra">${t}</span>${Q[t].nom}</h3>
-      ${l.length ? `<ol class="dm-l">${l.map(f => `<li><span class="dm-cod">${L.codigo(f)}</span><span>${esc(f.texto)}</span>${L.peso(f) ? `<span class="dm-peso">${L.peso(f)}</span>` : ""}</li>`).join("")}</ol>` : `<p class="dm-vacio">Sin ${Q[t].nom.toLowerCase()}</p>`}</div>`;
+      ${l.length ? `<ol class="dm-l">${l.map(f => `<li class="${pm && !L.esPrio(pm, f) ? "dm-fuera" : ""}"><span class="dm-cod">${L.codigo(f)}</span><span>${esc(f.texto)}</span>${L.peso(f) ? `<span class="dm-peso">${L.peso(f)}</span>` : ""}</li>`).join("")}</ol>` : `<p class="dm-vacio">Sin ${Q[t].nom.toLowerCase()}</p>`}</div>`;
   }
-  function matrizHtml(d) {
-    const m = L.matrizDafo(d);
+  function matrizHtml(d, conPrio = ENTREGA >= 2) {
+    const m = L.matrizDafo(d), pm = conPrio ? L.prioridad(d) : null;
     return `<div class="dafo-m" role="table" aria-label="Matriz DAFO">
       <span></span><span class="dm-h">A favor</span><span class="dm-h">En contra</span>
-      <span class="dm-lado">Interno</span>${celdaMatriz(d, m, "F")}${celdaMatriz(d, m, "D")}
-      <span class="dm-lado">Externo</span>${celdaMatriz(d, m, "O")}${celdaMatriz(d, m, "A")}
+      <span class="dm-lado">Interno</span>${celdaMatriz(d, m, "F", pm)}${celdaMatriz(d, m, "D", pm)}
+      <span class="dm-lado">Externo</span>${celdaMatriz(d, m, "O", pm)}${celdaMatriz(d, m, "A", pm)}
     </div>
-    <p class="field-sub">El número de cada factor es su peso: la importancia en los internos (1–5) y la importancia × probabilidad en los externos (1–25).</p>`;
+    <p class="field-sub">El número de cada factor es su peso: la importancia en los internos (1–5) y la importancia × probabilidad en los externos (1–25).${pm ? " En gris, los que no son prioritarios." : ""}</p>`;
   }
 
   // ---------- Vista imprimible: la matriz y los factores ----------
   function renderInforme(d) {
     const fila = (k, v) => lleno(v) ? `<tr><th>${k}</th><td>${escMl(v)}</td></tr>` : "";
-    const r = L.resumen(d), fin = L.FINALIDADES[d.finalidad];
+    const r = L.resumen(d), fin = L.FINALIDADES[d.finalidad], pm = L.prioridad(d), rc = L.resultadoCruces(d);
     const tablaQ = t => {
       const l = L.delTipo(d, t).filter(f => lleno(f.texto)), ext = !L.esInterno(t);
       if (!l.length) return "";
-      return `<h3 class="sub-h">${Q[t].nom}</h3><div class="table-wrap"><table class="mini tabla-riesgos tabla-fx"><thead><tr><th>Cód.</th><th>Factor</th><th>${ext ? "Ámbito" : "Área"}</th><th>Dato y fuente</th><th>Imp.</th>${ext ? "<th>Prob.</th><th>Peso</th>" : ""}</tr></thead><tbody>
-        ${l.map(f => { const fu = L.fuenteDe(d, f); return `<tr><td><b>${L.codigo(f)}</b></td><td><b>${esc(f.texto)}</b></td><td>${esc(L.nombreArea(f))}</td><td>${esc(f.evidencia)}${fu ? `<br><small>${esc(L.nombreFuente(fu))}</small>` : ""}</td><td>${esc(f.importancia)}</td>${ext ? `<td>${esc(f.probabilidad)}</td><td><b>${L.peso(f) || ""}</b></td>` : ""}</tr>`; }).join("")}
+      return `<h3 class="sub-h">${Q[t].nom}</h3><div class="table-wrap"><table class="mini tabla-riesgos tabla-fx"><thead><tr><th>Cód.</th><th>Factor</th><th>${ext ? "Ámbito" : "Área"}</th><th>Dato y fuente</th><th>Imp.</th>${ext ? "<th>Prob.</th><th>Peso</th>" : ""}<th>Prior.</th></tr></thead><tbody>
+        ${l.map(f => { const fu = L.fuenteDe(d, f), e = pm[f.id]; return `<tr><td><b>${L.codigo(f)}</b></td><td><b>${esc(f.texto)}</b>${e.por === "manual" ? `<br><small>${e.prio ? "Añadido" : "Quitado"} a mano: ${esc(f.motivo)}</small>` : ""}</td><td>${esc(L.nombreArea(f))}</td><td>${esc(f.evidencia)}${fu ? `<br><small>${esc(L.nombreFuente(fu))}</small>` : ""}</td><td>${esc(f.importancia)}</td>${ext ? `<td>${esc(f.probabilidad)}</td><td><b>${L.peso(f) || ""}</b></td>` : ""}<td>${e.prio ? "<b>Sí</b>" : "No"}</td></tr>`; }).join("")}
       </tbody></table></div>`;
     };
     view.innerHTML = `${informeBar()}${informeCab("DAFO" + (lleno(nombreDafo(d)) ? " · " + nombreDafo(d) : ""), fin ? fin.nom : "")}
       <div class="ficha">
         <div class="ficha-cab"><span class="wiz-paso">Análisis DAFO</span><h2 class="ficha-nombre">${esc(d.objeto || nombreDafo(d) || "Sin nombre")}</h2></div>
         <table class="ficha-t">${fila("Tipo", L.TIPOS_OBJETO[d.tipoObjeto])}${fila("Finalidad", fin ? fin.nom : "")}${fila("Horizonte", d.horizonte)}${fila("Misión", d.mision)}${fila("Visión", d.vision)}${fila("Qué queda dentro", d.incluye)}${fila("Qué queda fuera", d.excluye)}${fila("Responsable", d.responsable)}${fila("Fecha", d.fecha)}
-          <tr><th>Resumen</th><td>${L.TIPOS.map(t => `${r[t]} ${Q[t].nom.toLowerCase()}`).join(" · ")} · ${r.conEvidencia} de ${r.n} con su dato · ${plural(r.fuentes, "fuente", "fuentes")}</td></tr></table>
+          <tr><th>Resumen</th><td>${L.TIPOS.map(t => `${r[t]} ${Q[t].nom.toLowerCase()}`).join(" · ")} · ${r.conEvidencia} de ${r.n} con su dato · ${plural(r.fuentes, "fuente", "fuentes")} · los ${L.nPrioridad(d)} de más peso de cada cuadrante, prioritarios${rc.orientacion ? ` · orientación ${L.BLOQUES[rc.orientacion].nom.toLowerCase()} (${rc.orientacion})` : ""}</td></tr></table>
       </div>
       <h2 class="sec-t">Matriz DAFO</h2>
-      ${matrizHtml(d)}
+      ${matrizHtml(d, true)}
+      ${rc.total ? `<h2 class="sec-t">Matriz cruzada</h2>${tablaCruce(d, rc, true)}${resultadoHtml(d)}` : ""}
       ${d.fuentes.length ? `<h2 class="sec-t">Fuentes de información</h2><div class="table-wrap"><table class="mini tabla-riesgos"><thead><tr><th>Nº</th><th>Fuente</th><th>Tipo</th><th>Fecha</th><th>Qué dice</th></tr></thead><tbody>${d.fuentes.map((x, i) => `<tr><td>${i + 1}</td><td><b>${esc(L.nombreFuente(x))}</b></td><td>${esc(L.FUENTES_TIPO[x.tipo] ? L.FUENTES_TIPO[x.tipo].nom : "")}</td><td>${esc(x.fecha)}</td><td>${esc(x.nota)}</td></tr>`).join("")}</tbody></table></div>` : ""}
       <h2 class="sec-t">Análisis interno</h2>${tablaQ("F")}${tablaQ("D")}
       <h2 class="sec-t">Análisis externo</h2>${tablaQ("O")}${tablaQ("A")}
       <h2 class="sec-t">Escalas</h2>
       <div class="table-wrap"><table class="mini facil-tabla tabla-escalas"><tr><th></th><th>Importancia</th><th>Probabilidad (solo externos)</th></tr>${[0, 1, 2, 3, 4].map(i => `<tr><td><b>${i + 1}</b></td><td>${esc(L.ESC_IMP[i])}</td><td>${esc(L.ESC_PROB[i])}</td></tr>`).join("")}</table></div>
+      <p class="field-sub">Matriz cruzada: 0 sin relación · 1 débil · 2 media · 3 fuerte.</p>
       ${lleno(d.notas) ? `<p class="field-sub">${escMl(d.notas)}</p>` : ""}
       ${informePie()}`;
   }
@@ -473,8 +582,10 @@
     const n = pasoActual;
     const Z = {
       pasos: () => pasosInner(d, n), avisos: () => avisosGenerales(d, n), consejo: () => consejoHtml(d),
-      nfu: () => String(d.fuentes.length), matriz: () => matrizHtml(d)
+      nfu: () => String(d.fuentes.length), matriz: () => matrizHtml(d, n >= 5 || ENTREGA >= 2),
+      progcruce: () => progCruce(L.resultadoCruces(d)), resultado: () => resultadoHtml(d)
     };
+    if (n === 6) { const r = L.resultadoCruces(d); $$("[data-zmf]").forEach(el => { const f = d.factores.find(x => x.id === el.dataset.zmf); if (f) el.textContent = mediaDe(r, f); }); }
     L.TIPOS.forEach(t => { Z["n" + t] = () => String(d.factores.filter(f => f.tipo === t && lleno(f.texto)).length); });
     $$("[data-zona]").forEach(el => { const f = Z[el.dataset.zona]; if (f) el.innerHTML = f(); });
     $$("[data-zav]").forEach(el => { el.innerHTML = avisosFactor(d, n, el.dataset.zav); });
@@ -516,7 +627,7 @@
       <h1 class="page-title">Ejemplos</h1>
       <p class="page-lead">Para ver cómo queda cada paso antes de hacerlo tú. Están aparte: puedes tocarlos, pero <b>no se guardan ni se mezclan con tus datos</b>. Si te sirve de punto de partida, pulsa «Copiar a mis datos».</p>
       <h2 class="sec-t">Ejemplo completo: UGC de Atención Primaria</h2>
-      <p class="field-sub">Una UGC inventada (un centro de salud y dos consultorios, 22.000 habitantes) prepara su <b>acuerdo de gestión</b> y la acreditación. Ocho fuentes de datos y 24 factores, cada uno con su dato: el factor externo de más peso es el <i>envejecimiento de la población</i> (5 × 5 = 25); las debilidades más importantes, la <i>demora de 6 días</i> y la <i>conciliación de la medicación al 45 %</i>.</p>
+      <p class="field-sub">Una UGC inventada (un centro de salud y dos consultorios, 22.000 habitantes) prepara su <b>acuerdo de gestión</b> y la acreditación. Ocho fuentes de datos y 24 factores, cada uno con su dato: el factor externo de más peso es el <i>envejecimiento de la población</i> (5 × 5 = 25); las debilidades más importantes, la <i>demora de 6 días</i> y la <i>conciliación de la medicación al 45 %</i>. Con los 5 de más peso de cada cuadrante, la matriz cruzada (100 casillas) da una orientación <b>de reorientación</b>: el entorno ofrece oportunidades que hoy sus debilidades no dejan aprovechar.</p>
       <div class="ej-grid">${C.EJEMPLOS.fichas.map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}<a class="ej-card" href="#/dafo/ej-dafo-ugc/4?informe=1"><b>Matriz DAFO</b><span>Todo en una vista imprimible</span></a></div>
       <h2 class="sec-t">Minicasos</h2>
       <p class="placeholder-box">Próximamente: casos cortos (Urgencias, Farmacia, un proyecto nuevo, el bloque quirúrgico…) para practicar cada paso.</p>
@@ -693,6 +804,17 @@
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nombre;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
   }
+  function exportarExcel(d) {
+    try {
+      const bytes = window.Xlsx.construirLibroXlsx(L.hojasExcel(d, new Date().toLocaleDateString("es-ES")));
+      compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), nombreArchivo("xlsx"), "Excel descargado.");
+    } catch (e) { toast("No se ha podido crear el Excel.", 4000); }
+  }
+  function compartirOBajar(blob, nombre, msg) {
+    const file = new File([blob], nombre, { type: blob.type });
+    if (esIOS() && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: nombre }).catch(() => {});
+    else { descargar(blob, nombre); toast(msg, 3000); }
+  }
   function irInforme() { location.hash = rutaActual() + "?informe=1"; }
   function imprimir() {
     if (esIOS()) { guardarPDF(); return; }
@@ -702,7 +824,7 @@
 
   // ---------- Copia de seguridad e importar ----------
   async function copiaSeguridad() {
-    const contenido = JSON.stringify({ app: "dafo", v: L.VERSION_DATOS, exportado: hoy(), dafos: datosUsuario.dafos }, null, 1);
+    const contenido = JSON.stringify({ app: "dafo", v: L.VERSION_DATOS, exportado: hoy(), dafos: datosUsuario.dafos, intercambio: L.paqueteIntercambio(datosUsuario.dafos, APP_VERSION, hoy()) }, null, 1);
     const nombre = `DAFO copia ${new Date().toISOString().slice(0, 10)}.json`;
     const blob = new Blob([contenido], { type: "application/json" });
     const file = new File([blob], nombre, { type: "application/json" });
@@ -854,7 +976,7 @@
       });
     }
     // --- Paso 1 · textos propuestos ---
-    else if (act.startsWith("sug-") && d) {
+    else if (["sug-titulo", "sug-horizonte", "sug-mision", "sug-vision"].includes(act) && d) {
       const k = act.slice(4), fn = { titulo: () => L.sugerirTitulo(d, new Date().getFullYear() + 1), horizonte: () => L.sugerirHorizonte(d), mision: () => L.sugerirMision(d), vision: () => L.sugerirVision(d) }[k];
       const s = fn ? fn() : "";
       if (!s) { toast(k === "horizonte" ? "Elige primero la finalidad del análisis." : "Escribe primero qué vais a analizar.", 3000); return; }
@@ -893,6 +1015,37 @@
       const f = buscaEn(d.factores, id), k = b.dataset.f; if (!f || !["importancia", "probabilidad"].includes(k)) return;
       f[k] = f[k] === b.dataset.v ? "" : b.dataset.v; tocado(d); refrescar(f.id);
     }
+    // --- Paso 5 · priorizar ---
+    else if (act === "prio-n" && d) { d.prioridad.n = Number(b.dataset.v); tocado(d); repintar(); }
+    else if (act === "fx-manual" && d) {
+      const f = buscaEn(d.factores, id); if (!f) return;
+      f.manual = b.dataset.v; tocado(d); repintar();
+      if (f.manual && !lleno(f.motivo)) { const el = $(`[data-fx="${f.id}"][data-f="motivo"]`); if (el) el.focus(); }
+    }
+    else if (act === "sug-motivo" && d) {
+      const f = buscaEn(d.factores, id); if (!f) return;
+      const s = L.sugerirMotivo(d, f); f.motivo = lleno(f.motivo) ? f.motivo.trim() + " " + s : s; tocado(d); repintar();
+    }
+    // --- Paso 6 · cruzar ---
+    else if ((act === "cruce" || act === "cruce-v") && d) {
+      const f = buscaEn(d.factores, b.dataset.f), g = buscaEn(d.factores, b.dataset.g); if (!f || !g) return;
+      const k = L.claveCruce(f, g), v = L.valorCruce(d, f, g);
+      const nv = act === "cruce" ? (v === null ? 0 : v === 3 ? null : v + 1) : (v === Number(b.dataset.v) ? null : Number(b.dataset.v));
+      if (nv === null) delete d.cruces[k]; else d.cruces[k] = String(nv);
+      tocado(d);
+      if (act === "cruce") b.outerHTML = celdaCruce(d, f, g);
+      else $$("button", b.parentElement).forEach(x => x.classList.toggle("active", nv !== null && Number(x.dataset.v) === nv));
+      refrescar();
+    }
+    else if (act === "cruce-vista") { escribir(KEY_VISTA_CRUCE, b.dataset.v); repintar(); }
+    else if (act === "cruce-ceros" && d) {
+      const r = L.resultadoCruces(d), vacias = r.total - r.rellenas;
+      confirmar(`<p>Se pondrá <b>0 (sin relación)</b> en las ${vacias} casillas que quedan sin valorar. Las que ya tienen valor no cambian.</p>`, "Poner 0", () => {
+        [...r.ejes.F, ...r.ejes.D].forEach(f => [...r.ejes.O, ...r.ejes.A].forEach(g => { const k = L.claveCruce(f, g); if (d.cruces[k] === undefined) d.cruces[k] = "0"; }));
+        tocado(d); repintar();
+      }, { peligro: false });
+    }
+    else if (act === "excel" && d) exportarExcel(d);
     else if (act === "pegar-abrir") { pegarAbierto = true; repintar(); const el = $("#pegar-txt"); if (el) el.focus(); }
     else if (act === "pegar-cerrar") { pegarAbierto = false; repintar(); }
     else if (act === "pegar-ok" && d) {

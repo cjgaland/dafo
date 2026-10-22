@@ -173,10 +173,10 @@
   // ---------- Modelo ----------
   function nuevoDafo(id, fecha) {
     return { id, titulo: "", objeto: "", tipoObjeto: "", finalidad: "", horizonte: "", mision: "", vision: "", incluye: "", excluye: "",
-      responsable: "", fecha: "", fuentes: [], factores: [], notas: "", creado: fecha, modificado: fecha };
+      responsable: "", fecha: "", fuentes: [], factores: [], prioridad: { n: 5 }, cruces: {}, notas: "", creado: fecha, modificado: fecha };
   }
   function nuevaFuente(id) { return { id, tipo: "", nombre: "", fecha: "", nota: "" }; }
-  function nuevoFactor(id, tipo = "F", n = 0) { return { id, tipo, num: n, texto: "", area: "", evidencia: "", fuenteId: "", aporta: "", importancia: "", probabilidad: "" }; }
+  function nuevoFactor(id, tipo = "F", n = 0) { return { id, tipo, num: n, texto: "", area: "", evidencia: "", fuenteId: "", aporta: "", importancia: "", probabilidad: "", manual: "", motivo: "" }; }
   const siguienteNum = (d, t) => d.factores.filter(f => f.tipo === t).reduce((m, f) => Math.max(m, Number(f.num) || 0), 0) + 1;
   const fuenteDe = (d, f) => d.fuentes.find(x => x.id === f.fuenteId) || null;
   const nombreFuente = x => x ? (lleno(x.nombre) ? x.nombre : FUENTES_TIPO[x.tipo] ? FUENTES_TIPO[x.tipo].nom : "") : "";
@@ -305,7 +305,7 @@
   }
   const avisosInterno = d => avisosCuadrantes(d, 3);
   const avisosExterno = d => avisosCuadrantes(d, 4);
-  const avisosDe = (d, n) => ({ 1: avisosObjeto, 2: avisosFuentes, 3: avisosInterno, 4: avisosExterno }[n] || (() => []))(d);
+  const avisosDe = (d, n) => ({ 1: avisosObjeto, 2: avisosFuentes, 3: avisosInterno, 4: avisosExterno, 5: avisosPriorizar, 6: avisosCruzar }[n] || (() => []))(d);
 
   // ---------- Resumen y progreso ----------
   function resumen(d) {
@@ -322,7 +322,9 @@
       2: d.fuentes.some(x => lleno(x.nombre) || lleno(x.tipo)),
       3: listo("F") && listo("D"),
       4: listo("O") && listo("A"),
-      5: false, 6: false, 7: false, 8: false
+      5: TIPOS.every(t => prioritarios(d, t).length) && !d.factores.some(f => lleno(f.texto) && f.manual && !lleno(f.motivo)),
+      6: (() => { const r = resultadoCruces(d); return r.listo && r.valores.some(v => v > 0); })(),
+      7: false, 8: false
     };
   }
   // Primer paso disponible sin terminar
@@ -335,7 +337,9 @@
     1: d => lleno(d.objeto) ? `Elige la finalidad del análisis de «${corto(d.objeto, 50)}» y su horizonte temporal.` : "Decide qué vais a analizar (servicio, unidad o proyecto) y para qué.",
     2: () => "Apunta las fuentes de datos con las que vais a trabajar: resultados, encuestas, notificaciones, indicadores…",
     3: d => d.factores.some(f => esInterno(f.tipo)) ? "Completa las fortalezas y debilidades: cada una con su dato y su importancia." : "Mira hacia dentro: ¿qué hacéis bien (fortalezas) y qué hacéis peor (debilidades)?",
-    4: d => d.factores.some(f => !esInterno(f.tipo)) ? "Completa las oportunidades y amenazas: cada una con su importancia y su probabilidad." : "Mira hacia fuera: ¿qué os puede ayudar (oportunidades) y qué os puede perjudicar (amenazas)?"
+    4: d => d.factores.some(f => !esInterno(f.tipo)) ? "Completa las oportunidades y amenazas: cada una con su importancia y su probabilidad." : "Mira hacia fuera: ¿qué os puede ayudar (oportunidades) y qué os puede perjudicar (amenazas)?",
+    5: d => `Quedaos con lo importante: los ${nPrioridad(d)} factores de más peso de cada cuadrante, y decidid a mano los empates.`,
+    6: d => { const r = resultadoCruces(d); return r.rellenas ? `Termina la matriz cruzada: quedan ${r.total - r.rellenas} de ${r.total} casillas por valorar.` : "Cruza los factores prioritarios: ¿qué fortalezas y debilidades pesan ante cada oportunidad y amenaza?"; }
   };
   function siguientePaso(datos, entrega) {
     const L = datos.dafos;
@@ -343,7 +347,240 @@
     const d = L.slice().sort((x, y) => String(y.modificado).localeCompare(String(x.modificado)))[0];
     const p = pasoPendiente(d, entrega), nom = corto(nombreDafo(d) || "tu DAFO", 50);
     if (p) return { k: "paso" + p.n, texto: `«${nom}»: ${TEXTO_PASO[p.n](d)}`, href: `#/dafo/${d.id}/${p.n}`, btn: `Ir al paso ${p.n}` };
-    return { k: "listo", texto: `«${nom}» tiene sus cuatro cuadrantes completos y puntuados. La priorización, la matriz cruzada y las estrategias CAME llegan en la próxima versión; mientras, revisa la matriz DAFO.`, href: `#/dafo/${d.id}/4?informe=1`, btn: "Ver la matriz DAFO" };
+    const r = resultadoCruces(d);
+    return { k: "listo", texto: `«${nom}» tiene la matriz cruzada completa${r.orientacion ? `: su orientación es ${BLOQUES[r.orientacion].nom.toLowerCase()} (${r.orientacion})` : ""}. Las estrategias CAME y el plan de acción llegan en la próxima versión; mientras, revisa la orientación y los cruces fuertes.`, href: `#/dafo/${d.id}/6`, btn: "Ver la orientación" };
+  }
+
+  // ---------- Paso 5 · Priorizar: los N de más peso por cuadrante ----------
+  const nPrioridad = d => { const n = Number(d.prioridad && d.prioridad.n); return Number.isInteger(n) && n >= 1 && n <= 15 ? n : 5; };
+  // Por factor con texto: { prio, auto, por: "criterio"|"manual"|null, puesto, peso }.
+  // Manda la decisión a mano (sí/no, con motivo); si no la hay, entran los N de más peso de su cuadrante.
+  function prioridad(d) {
+    const N = nPrioridad(d), P = puestos(d), m = {};
+    TIPOS.forEach(t => {
+      const l = delTipo(d, t).filter(f => lleno(f.texto));
+      let i = 0;
+      l.forEach(f => {
+        const p = peso(f), auto = !!p && i++ < N;
+        const prio = f.manual === "si" ? true : f.manual === "no" ? false : auto;
+        m[f.id] = { prio, auto, por: f.manual ? "manual" : auto ? "criterio" : null, puesto: P[f.id], peso: p };
+      });
+    });
+    return m;
+  }
+  const esPrio = (m, f) => !!(m[f.id] && m[f.id].prio);
+  function prioritarios(d, t) { const m = prioridad(d); return delTipo(d, t).filter(f => lleno(f.texto) && esPrio(m, f)); }
+  // Empates en el corte: factores que quedan fuera con el mismo peso que el último que entra
+  function empatesCorte(d) {
+    const N = nPrioridad(d), r = {};
+    TIPOS.forEach(t => {
+      const l = delTipo(d, t).filter(f => lleno(f.texto) && peso(f));
+      if (l.length <= N) return;
+      const ult = peso(l[N - 1]), fuera = l.slice(N).filter(f => peso(f) === ult);
+      if (fuera.length) r[t] = { dentro: l.slice(0, N).filter(f => peso(f) === ult), fuera };
+    });
+    return r;
+  }
+  function sugerirMotivo(d, f) {
+    const l = delTipo(d, f.tipo).filter(x => lleno(x.texto)), pos = puestos(d)[f.id], C = CUADRANTES[f.tipo];
+    const base = esInterno(f.tipo) ? `Importancia ${f.importancia || "sin puntuar"}` : `Importancia ${f.importancia || "?"} × probabilidad ${f.probabilidad || "?"} = peso ${peso(f) || "?"}`;
+    return `${base}; ${pos ? `el ${pos}.º` : "sin puesto"} de ${l.length} ${l.length === 1 ? C.uno : C.nom.toLowerCase()}.`;
+  }
+  function avisosPriorizar(d) {
+    const A = [], m = prioridad(d), N = nPrioridad(d);
+    TIPOS.forEach(t => {
+      const C = CUADRANTES[t], l = d.factores.filter(f => f.tipo === t && lleno(f.texto));
+      if (!l.length) { A.push({ nivel: "warn", texto: `No hay ${C.nom.toLowerCase()}: complétalas en el paso ${esInterno(t) ? 3 : 4} antes de priorizar.` }); return; }
+      const sinPeso = l.filter(f => !peso(f)).length;
+      if (sinPeso) A.push({ nivel: "nota", texto: `${sinPeso === 1 ? "Una " + C.uno + " no tiene" : sinPeso + " " + C.nom.toLowerCase() + " no tienen"} ${esInterno(t) ? "importancia" : "importancia y probabilidad"}: no entra${sinPeso === 1 ? "" : "n"} en el orden.` });
+      const pr = l.filter(f => esPrio(m, f));
+      if (!pr.length) A.push({ nivel: "warn", texto: `Ninguna ${C.uno} es prioritaria. Sin ellas no se puede cruzar en el paso 6.` });
+      else if (pr.length > N + 3) A.push({ nivel: "nota", texto: `Hay ${pr.length} ${C.nom.toLowerCase()} prioritarias. Con muchas, la matriz cruzada se hace eterna y nada destaca.` });
+      const sinDato = pr.filter(f => !lleno(f.evidencia) && !lleno(f.fuenteId)).length;
+      if (sinDato) A.push({ nivel: "nota", texto: `${sinDato === 1 ? "Una " + C.uno + " prioritaria no tiene" : sinDato + " " + C.nom.toLowerCase() + " prioritarias no tienen"} un dato que la${sinDato === 1 ? "" : "s"} respalde. Lo que más pesa debería ser lo mejor documentado.` });
+    });
+    d.factores.filter(f => lleno(f.texto) && f.manual && !lleno(f.motivo)).forEach(f => A.push({ nivel: "warn", factor: f.id, texto: `${codigo(f)}: ${f.manual === "si" ? "lo has añadido" : "lo has quitado"} a mano sin escribir el motivo. Quien lea el análisis tiene que saber por qué.` }));
+    // Uno añadido a mano con menos peso que otro que queda fuera por el criterio
+    d.factores.filter(f => lleno(f.texto) && f.manual === "si" && peso(f)).forEach(f => {
+      const mas = d.factores.filter(g => g.tipo === f.tipo && lleno(g.texto) && !esPrio(m, g) && !g.manual && peso(g) > peso(f));
+      if (mas.length) A.push({ nivel: "nota", factor: f.id, texto: `${codigo(f)} entra a mano con peso ${peso(f)}, y ${mas.map(codigo).join(", ")} ${mas.length === 1 ? "queda" : "quedan"} fuera con más peso. Si es a propósito, que el motivo lo explique.` });
+    });
+    const E = empatesCorte(d);
+    Object.keys(E).forEach(t => A.push({ nivel: "nota", texto: `Empate en el corte de ${CUADRANTES[t].nom.toLowerCase()}: ${E[t].fuera.map(codigo).join(", ")} ${E[t].fuera.length === 1 ? "tiene" : "tienen"} el mismo peso (${peso(E[t].fuera[0])}) que ${E[t].dentro.map(codigo).join(", ")} y ${E[t].fuera.length === 1 ? "queda" : "quedan"} fuera. Decidid a mano cuál entra.` }));
+    return conPaso(5, A);
+  }
+
+  // ---------- Paso 6 · Matriz cruzada y orientación estratégica ----------
+  const BLOQUES = {
+    FO: { k: "FO", fila: "F", col: "O", came: "E", verbo: "Explotar", postura: "ofensiva", nom: "Ofensiva",
+      preg: "¿Esta fortaleza nos ayuda a aprovechar esta oportunidad?",
+      texto: "Vuestras fortalezas encajan con las oportunidades del entorno: es el momento de crecer y aprovecharlas (estrategias de explotar)." },
+    FA: { k: "FA", fila: "F", col: "A", came: "M", verbo: "Mantener", postura: "defensiva", nom: "Defensiva",
+      preg: "¿Esta fortaleza nos ayuda a hacer frente a esta amenaza?",
+      texto: "Vuestras fortalezas son la mejor defensa frente a las amenazas: protegedlas y apoyaos en ellas (estrategias de mantener)." },
+    DO: { k: "DO", fila: "D", col: "O", came: "C", verbo: "Corregir", postura: "reorientacion", nom: "De reorientación",
+      preg: "¿Esta debilidad nos impide aprovechar esta oportunidad?",
+      texto: "El entorno ofrece oportunidades que hoy vuestras debilidades no dejan aprovechar: corregidlas para poder hacerlo (estrategias de corregir)." },
+    DA: { k: "DA", fila: "D", col: "A", came: "A", verbo: "Afrontar", postura: "supervivencia", nom: "De supervivencia",
+      preg: "¿Esta debilidad nos hace más vulnerables a esta amenaza?",
+      texto: "Vuestras debilidades os dejan expuestos ante las amenazas: reducid primero esa vulnerabilidad (estrategias de afrontar)." }
+  };
+  const ORDEN_BLOQUES = ["FO", "FA", "DO", "DA"];
+  // Texto de partida de la estrategia que sugiere un cruce (se revisará en el paso 7)
+  function estrategiaPropuesta(f, g) {
+    const k = bloqueDe(f, g), a = codigo(f), b = codigo(g);
+    return { FO: `Usar ${a} para aprovechar ${b}`, FA: `Apoyarse en ${a} para hacer frente a ${b}`, DO: `Aprovechar ${b} para corregir ${a}`, DA: `Reducir ${a} para que ${b} nos afecte menos` }[k];
+  }
+  const bloqueDe = (f, g) => f.tipo + g.tipo;
+  const ESC_CRUCE = ["Sin relación", "Débil", "Media", "Fuerte"];
+  const claveCruce = (f, g) => f.id + "|" + g.id;
+  const valorCruce = (d, f, g) => { const v = d.cruces[claveCruce(f, g)]; return v === undefined || v === "" ? null : Number(v); };
+  // Filas (F y D) y columnas (O y A) de la matriz: solo los prioritarios, en orden de peso
+  function ejesCruce(d) {
+    const m = prioridad(d), pr = t => delTipo(d, t).filter(f => lleno(f.texto) && esPrio(m, f));
+    return { F: pr("F"), D: pr("D"), O: pr("O"), A: pr("A") };
+  }
+  const redondea = v => Math.round(v * 100) / 100;
+  function resultadoCruces(d) {
+    const E = ejesCruce(d), bloques = {}, fuertes = [];
+    let total = 0, rellenas = 0, valores = [];
+    ORDEN_BLOQUES.forEach(k => {
+      const B = BLOQUES[k]; let suma = 0, n = 0, casillas = 0;
+      E[B.fila].forEach(f => E[B.col].forEach(g => {
+        casillas++; const v = valorCruce(d, f, g);
+        if (v !== null) { n++; suma += v; valores.push(v); if (v === 3) fuertes.push({ fila: f, col: g, bloque: k }); }
+      }));
+      // La media se calcula sobre todas las casillas del bloque (vacía = 0) para comparar bloques de distinto tamaño
+      bloques[k] = { suma, rellenas: n, casillas, media: casillas ? redondea(suma / casillas) : 0 };
+      total += casillas; rellenas += n;
+    });
+    const listo = total > 0 && rellenas === total && ORDEN_BLOQUES.every(k => bloques[k].casillas);
+    const orden = ORDEN_BLOQUES.slice().sort((a, b) => bloques[b].media - bloques[a].media);
+    const orientacion = listo && bloques[orden[0]].suma > 0 ? orden[0] : null;
+    const empate = orientacion && bloques[orden[0]].media - bloques[orden[1]].media < 0.1 ? orden[1] : null;
+    // Factores llave: los de más media en su fila (internos) o su columna (externos)
+    const porFactor = [];
+    const linea = (f, otros, val) => { const v = otros.map(val).filter(x => x !== null), s = v.reduce((a, b) => a + b, 0); porFactor.push({ f, suma: s, media: otros.length ? redondea(s / otros.length) : 0 }); };
+    [...E.F, ...E.D].forEach(f => linea(f, [...E.O, ...E.A], g => valorCruce(d, f, g)));
+    [...E.O, ...E.A].forEach(g => linea(g, [...E.F, ...E.D], f => valorCruce(d, f, g)));
+    const llaves = porFactor.filter(x => x.media >= 1).sort((a, b) => b.media - a.media || b.suma - a.suma).slice(0, 3);
+    return { ejes: E, bloques, total, rellenas, listo, orden, orientacion, empate, porFactor, llaves, fuertes, valores };
+  }
+  function avisosCruzar(d) {
+    const A = [], r = resultadoCruces(d);
+    const faltan = TIPOS.filter(t => !r.ejes[t].length);
+    if (faltan.length) { A.push({ nivel: "warn", texto: `Faltan factores prioritarios en ${faltan.map(t => CUADRANTES[t].nom.toLowerCase()).join(", ")}. Vuelve al paso 5: sin ellos no se puede cruzar.` }); return conPaso(6, A); }
+    if (r.total > 150) A.push({ nivel: "nota", texto: `Son ${r.total} casillas. Es mucho trabajo: valora quedarte con menos prioritarios en el paso 5 (con 5 por cuadrante son 100).` });
+    if (!r.rellenas) A.push({ nivel: "nota", texto: `Hay ${r.total} casillas por valorar, de 0 (sin relación) a 3 (fuerte). Id bloque a bloque: cada uno responde a una pregunta distinta.` });
+    else if (r.rellenas < r.total) A.push({ nivel: "nota", texto: `Quedan ${r.total - r.rellenas} de ${r.total} casillas sin valorar. Hasta completarlas, la orientación no es fiable.` });
+    if (r.valores.length >= 10) {
+      if (r.valores.every(v => v === 0)) A.push({ nivel: "warn", texto: "Todas las casillas valoradas tienen 0. Si nada se relaciona con nada, revisad si los factores están bien escritos y son de verdad los importantes." });
+      else if (new Set(r.valores).size === 1) A.push({ nivel: "nota", texto: `Todas las casillas tienen ${r.valores[0]}. Así la matriz no distingue nada: usad la escala completa.` });
+      else if (r.valores.filter(v => v === 3).length / r.valores.length > 0.5) A.push({ nivel: "nota", texto: "Más de la mitad de las casillas tienen 3. Si todo se relaciona mucho, nada destaca: reservad el 3 para los cruces de verdad fuertes." });
+    }
+    if (r.orientacion && r.empate) A.push({ nivel: "nota", texto: `Los bloques ${r.orientacion} y ${r.empate} pesan casi lo mismo: la unidad está entre una postura ${BLOQUES[r.orientacion].nom.toLowerCase()} y una ${BLOQUES[r.empate].nom.toLowerCase()}. Tenedlo en cuenta al elegir estrategias.` });
+    return conPaso(6, A);
+  }
+
+  // ---------- Intercambio con las otras apps (formato dafo-came, versión 1) ----------
+  // Las otras apps no leen dafo-datos: leen este paquete con forma fija (también va en la copia .json, clave «intercambio»).
+  const FORMATO_INTERCAMBIO = "dafo-came", VERSION_INTERCAMBIO = 1;
+  const numONull = v => { const n = entero1a5(v); return n || null; };
+  function paqueteIntercambio(dafos, appVersion, fecha) {
+    return {
+      formato: FORMATO_INTERCAMBIO, version: VERSION_INTERCAMBIO, app: "dafo", appVersion, generado: fecha,
+      dafos: dafos.map(d => {
+        const m = prioridad(d), r = resultadoCruces(d), cod = {};
+        d.factores.forEach(f => { cod[f.id] = codigo(f); });
+        return {
+          id: d.id, titulo: nombreDafo(d), objeto: d.objeto, tipoObjeto: d.tipoObjeto || null, finalidad: d.finalidad || null, horizonte: d.horizonte, fecha: d.fecha, edicion: null,
+          criterio: { n: nPrioridad(d) },
+          orientacion: r.orientacion ? BLOQUES[r.orientacion].postura : null,
+          factores: TIPOS.flatMap(t => delTipo(d, t).filter(f => lleno(f.texto)).map(f => {
+            const e = m[f.id], fu = fuenteDe(d, f);
+            return { id: f.id, codigo: codigo(f), tipo: f.tipo, texto: f.texto, area: f.area || null, areaNombre: nombreArea(f) || null, evidencia: f.evidencia, fuente: fu ? nombreFuente(fu) : null,
+              importancia: numONull(f.importancia), probabilidad: esInterno(f.tipo) ? null : numONull(f.probabilidad), peso: peso(f), puesto: e.puesto || null,
+              prioritario: e.prio, motivoPrioridad: e.por, motivo: f.motivo || null };
+          })),
+          cruces: ORDEN_BLOQUES.flatMap(k => { const B = BLOQUES[k]; return r.ejes[B.fila].flatMap(f => r.ejes[B.col].map(g => ({ fila: cod[f.id], columna: cod[g.id], bloque: k, valor: valorCruce(d, f, g) })).filter(x => x.valor !== null)); }),
+          estrategias: [], candidatos: []
+        };
+      })
+    };
+  }
+  // Lo que hará la app que recibe: comprobar formato y versión antes de usar nada. Acepta el paquete o la copia .json.
+  function leerIntercambio(o) {
+    if (o && typeof o === "object" && o.intercambio) o = o.intercambio;
+    if (!o || typeof o !== "object" || o.formato !== FORMATO_INTERCAMBIO || o.version !== VERSION_INTERCAMBIO || !Array.isArray(o.dafos)) return null;
+    return o.dafos.filter(x => x && typeof x === "object" && Array.isArray(x.factores));
+  }
+
+  // ---------- Excel ----------
+  const ESTILOS_XLSX = {
+    titulo: { negrita: true, tamano: 14, colorTexto: "FFFFFF", colorFondo: "5B21B6", borde: false },
+    sub: { cursiva: true, colorTexto: "444444", borde: false },
+    cab: { negrita: true, colorTexto: "FFFFFF", colorFondo: "0D1B2A", alineacion: "center", ajustarTexto: true },
+    celda: { ajustarTexto: true, vertical: "top" },
+    negrita: { negrita: true, ajustarTexto: true, vertical: "top" },
+    centro: { alineacion: "center", vertical: "top", ajustarTexto: true },
+    prio: { negrita: true, alineacion: "center", vertical: "top", colorTexto: "5B21B6" },
+    q_F: { negrita: true, colorTexto: "FFFFFF", colorFondo: "15803D", ajustarTexto: true },
+    q_D: { negrita: true, colorTexto: "FFFFFF", colorFondo: "B45309", ajustarTexto: true },
+    q_O: { negrita: true, colorTexto: "FFFFFF", colorFondo: "1D4ED8", ajustarTexto: true },
+    q_A: { negrita: true, colorTexto: "FFFFFF", colorFondo: "BE123C", ajustarTexto: true },
+    c_F: { ajustarTexto: true, vertical: "top", colorFondo: "EEF8F1" }, c_D: { ajustarTexto: true, vertical: "top", colorFondo: "FBF4EA" },
+    c_O: { ajustarTexto: true, vertical: "top", colorFondo: "EEF3FD" }, c_A: { ajustarTexto: true, vertical: "top", colorFondo: "FCF0F3" },
+    v0: { alineacion: "center", vertical: "center", colorTexto: "94A3B8" }, v1: { alineacion: "center", vertical: "center", colorFondo: "EDE9FE" },
+    v2: { alineacion: "center", vertical: "center", negrita: true, colorFondo: "C4B5FD" }, v3: { alineacion: "center", vertical: "center", negrita: true, colorTexto: "FFFFFF", colorFondo: "6D28D9" },
+    vacio: { alineacion: "center", vertical: "center", colorFondo: "F1F5F9" },
+    eje: { negrita: true, alineacion: "center", vertical: "center", colorFondo: "E2E8F0", ajustarTexto: true }
+  };
+  function hojasExcel(d, fecha) {
+    const T = (texto, estilo = "celda") => ({ texto: texto == null ? "" : String(texto), estilo });
+    const N = x => x ? { numero: x, estilo: "centro" } : T("", "centro");
+    const nom = nombreDafo(d) || "DAFO", m = prioridad(d), fin = FINALIDADES[d.finalidad];
+    const cabecera = (titulo, cols) => { const f = [[T(titulo, "titulo")], [T([d.objeto !== nom ? d.objeto : "", fin ? fin.nom : "", "Exportado de la app DAFO · CAME · " + fecha].filter(lleno).join(" · "), "sub")], cols.map(x => T(x, "cab"))]; f[0][0].combinar = cols.length; f[1][0].combinar = cols.length; return f; };
+    const motivo = f => { const e = m[f.id]; return !e ? "" : e.por === "manual" ? (e.prio ? "Añadido a mano: " : "Quitado a mano: ") + f.motivo : e.por === "criterio" ? `Entre los ${nPrioridad(d)} de más peso` : ""; };
+    // 1. Factores
+    const h1 = cabecera("Factores DAFO · " + nom, ["Código", "Cuadrante", "Factor", "Área o ámbito", "Dato que lo respalda", "Fuente", "Quién lo aporta", "Importancia", "Probabilidad", "Peso", "Puesto", "Prioritario", "Motivo"]);
+    TIPOS.forEach(t => delTipo(d, t).filter(f => lleno(f.texto)).forEach(f => { const e = m[f.id], fu = fuenteDe(d, f);
+      h1.push([T(codigo(f), "q_" + t), T(CUADRANTES[t].nom), T(f.texto, "negrita"), T(nombreArea(f)), T(f.evidencia), T(fu ? nombreFuente(fu) : ""), T(APORTA[f.aporta] || ""), N(entero1a5(f.importancia)), N(esInterno(t) ? null : entero1a5(f.probabilidad)), N(peso(f)), N(e.puesto), T(e.prio ? "Sí" : "No", e.prio ? "prio" : "centro"), T(motivo(f))]); }));
+    // 2. Matriz DAFO (solo prioritarios)
+    const h2 = [[T("Matriz DAFO · factores prioritarios", "titulo")], [T("Cada cuadrante, ordenado por su peso. Interno arriba (fortalezas y debilidades), externo abajo (oportunidades y amenazas).", "sub")]];
+    h2[0][0].combinar = 2; h2[1][0].combinar = 2;
+    [["F", "D"], ["O", "A"]].forEach(([a, b]) => {
+      h2.push([T(CUADRANTES[a].nom, "q_" + a), T(CUADRANTES[b].nom, "q_" + b)]);
+      const la = prioritarios(d, a), lb = prioritarios(d, b);
+      for (let i = 0; i < Math.max(la.length, lb.length, 1); i++) h2.push([T(la[i] ? `${codigo(la[i])} · ${la[i].texto} (${peso(la[i]) || "—"})` : "", "c_" + a), T(lb[i] ? `${codigo(lb[i])} · ${lb[i].texto} (${peso(lb[i]) || "—"})` : "", "c_" + b)]);
+    });
+    // 3. Matriz cruzada
+    const r = resultadoCruces(d), filas = [...r.ejes.F, ...r.ejes.D], cols = [...r.ejes.O, ...r.ejes.A];
+    const h3 = [[T("Matriz cruzada (0 sin relación · 1 débil · 2 media · 3 fuerte)", "titulo")], [T("Filas: fortalezas y debilidades prioritarias. Columnas: oportunidades y amenazas prioritarias.", "sub")]];
+    h3[0][0].combinar = cols.length + 2; h3[1][0].combinar = cols.length + 2;
+    h3.push([T("", "eje"), ...cols.map(g => T(codigo(g), "q_" + g.tipo)), T("Media", "eje")]);
+    filas.forEach(f => { const pf = r.porFactor.find(x => x.f === f); h3.push([T(codigo(f), "q_" + f.tipo), ...cols.map(g => { const v = valorCruce(d, f, g); return v === null ? T("", "vacio") : { numero: v, estilo: "v" + v }; }), { numero: pf ? pf.media : 0, estilo: "eje" }]); });
+    h3.push([T("Media", "eje"), ...cols.map(g => { const pf = r.porFactor.find(x => x.f === g); return { numero: pf ? pf.media : 0, estilo: "eje" }; }), T("", "eje")]);
+    h3.push([]); h3.push(["Bloque", "Estrategia", "Postura", "Suma", "Casillas", "Media"].map(x => T(x, "cab")));
+    ORDEN_BLOQUES.forEach(k => { const b = r.bloques[k], B = BLOQUES[k]; h3.push([T(k, "negrita"), T(B.verbo), T(B.nom), { numero: b.suma, estilo: "centro" }, { numero: b.casillas, estilo: "centro" }, { numero: b.media, estilo: k === r.orientacion ? "prio" : "centro" }]); });
+    h3.push([T(r.orientacion ? `Orientación: ${BLOQUES[r.orientacion].nom.toLowerCase()} (${r.orientacion}). ${BLOQUES[r.orientacion].texto}` : `Orientación: pendiente (${r.rellenas} de ${r.total} casillas valoradas).`, "sub")]);
+    if (r.llaves.length) h3.push([T("Factores llave: " + r.llaves.map(x => `${codigo(x.f)} (media ${x.media})`).join(", "), "sub")]);
+    h3.push([]); h3.push(["Código", "Factor"].map(x => T(x, "cab")));
+    [...filas, ...cols].forEach(f => h3.push([T(codigo(f), "q_" + f.tipo), T(f.texto)]));
+    // 4. Fuentes y 5. Ficha
+    const h4 = cabecera("Fuentes de información · " + nom, ["Nº", "Fuente", "Tipo", "Fecha", "Qué dice", "Factores que la citan"]);
+    d.fuentes.forEach((x, i) => h4.push([T(i + 1, "centro"), T(nombreFuente(x), "negrita"), T(FUENTES_TIPO[x.tipo] ? FUENTES_TIPO[x.tipo].nom : ""), T(x.fecha), T(x.nota), T(d.factores.filter(f => f.fuenteId === x.id).map(codigo).join(", "))]));
+    const h5 = cabecera("Ficha del análisis · " + nom, ["Campo", "Valor"]);
+    [["Qué se analiza", d.objeto], ["Tipo", TIPOS_OBJETO[d.tipoObjeto]], ["Finalidad", fin ? fin.nom : ""], ["Horizonte", d.horizonte], ["Misión", d.mision], ["Visión", d.vision], ["Qué queda dentro", d.incluye], ["Qué queda fuera", d.excluye], ["Responsable", d.responsable], ["Fecha", d.fecha], ["Prioritarios por cuadrante", String(nPrioridad(d))]].forEach(([k, v]) => h5.push([T(k, "negrita"), T(v)]));
+    h5.push([]); h5.push(["Puntos", "Importancia", "Probabilidad (externos)"].map(x => T(x, "cab")));
+    ESC_IMP.forEach((x, i) => h5.push([T(i + 1, "centro"), T(x), T(ESC_PROB[i])]));
+    h5.push([T("Peso: importancia (internos, 1–5); importancia × probabilidad (externos, 1–25).", "sub")]);
+    return { estilos: ESTILOS_XLSX, hojas: [
+      { nombre: "Factores", filas: h1, opciones: { anchoColumnas: [8, 14, 46, 22, 34, 28, 16, 11, 11, 7, 8, 11, 34], congelar: { filas: 3, columnas: 0 }, altoFilas: { 1: 24 }, primera: true } },
+      { nombre: "Matriz DAFO", filas: h2, opciones: { anchoColumnas: [60, 60], altoFilas: { 1: 24 } } },
+      { nombre: "Matriz cruzada", filas: h3, opciones: { anchoColumnas: [9, ...cols.map(() => 7), 8], altoFilas: { 1: 24 } } },
+      { nombre: "Fuentes", filas: h4, opciones: { anchoColumnas: [5, 40, 26, 14, 40, 20], congelar: { filas: 3, columnas: 0 } } },
+      { nombre: "Ficha", filas: h5, opciones: { anchoColumnas: [26, 70, 50] } }
+    ] };
   }
 
   // ---------- Pegar una lista desde Excel/Calc/Word ----------
@@ -416,12 +653,13 @@
   const ESQ = {
     fuente: { id: "id", tipo: { en: Object.keys(FUENTES_TIPO) }, nombre: [300], fecha: [40], nota: [1000] },
     factor: { id: "id", tipo: { en: TIPOS }, num: "ent", texto: [500], area: { en: [...Object.keys(AREAS), ...Object.keys(AMBITOS)] }, evidencia: [1000], fuenteId: "ref",
-      aporta: { en: Object.keys(APORTA) }, importancia: [2], probabilidad: [2] },
+      aporta: { en: Object.keys(APORTA) }, importancia: [2], probabilidad: [2], manual: { en: ["si", "no"] }, motivo: [500] },
+    prioridad: { n: "ent" },
     dafo: { id: "id", titulo: [200], objeto: [300], tipoObjeto: { en: Object.keys(TIPOS_OBJETO) }, finalidad: { en: Object.keys(FINALIDADES) }, horizonte: [200],
       mision: [1500], vision: [1500], incluye: [1500], excluye: [1500], responsable: [300], fecha: [40],
-      fuentes: { de: "fuente", max: 60 }, factores: { de: "factor", max: 400 }, notas: [3000], creado: [40], modificado: [40] }
+      fuentes: { de: "fuente", max: 60 }, factores: { de: "factor", max: 400 }, prioridad: { obj: "prioridad" }, cruces: "cruces", notas: [3000], creado: [40], modificado: [40] }
   };
-  const FABRICA = { fuente: nuevaFuente, factor: id => nuevoFactor(id), dafo: id => nuevoDafo(id, "") };
+  const FABRICA = { fuente: nuevaFuente, factor: id => nuevoFactor(id), prioridad: () => ({ n: 5 }), dafo: id => nuevoDafo(id, "") };
   function sanear(esq, o, genId) {
     if (!o || typeof o !== "object" || Array.isArray(o)) return null;
     const S = ESQ[esq], r = FABRICA[esq](genId());
@@ -431,9 +669,17 @@
       else if (regla === "ref") r[k] = idValido(v) ? v : "";
       else if (regla === "ent") { const n = num(v); r[k] = Number.isInteger(n) && n >= 0 && n < 1e6 ? n : 0; }
       else if (Array.isArray(regla)) { if (v !== undefined) r[k] = txt(v, regla[0]); }
+      else if (regla === "cruces") r[k] = sanearCruces(v);
       else if (regla.en) r[k] = regla.en.includes(v) ? v : r[k];
+      else if (regla.obj) r[k] = sanear(regla.obj, v, genId) || r[k];
       else if (regla.de) r[k] = Array.isArray(v) ? v.slice(0, regla.max).map(x => sanear(regla.de, x, genId)).filter(Boolean) : [];
     });
+    return r;
+  }
+  // Cruces: { "<idFila>|<idColumna>": "0"–"3" }. Las claves con ids raros o valores fuera de 0–3 se descartan.
+  function sanearCruces(v) {
+    const r = {}; if (!v || typeof v !== "object" || Array.isArray(v)) return r;
+    Object.keys(v).slice(0, 4000).forEach(k => { const [a, b, x] = k.split("|"); const val = String(v[k]); if (x === undefined && idValido(a) && idValido(b) && /^[0-3]$/.test(val)) r[k] = val; });
     return r;
   }
   function sanearDafo(o, genId, fecha) {
@@ -445,6 +691,10 @@
       if (f.area && !areasDe(f.tipo)[f.area]) f.area = "";     // un área interna en un factor externo, o al revés
       if (esInterno(f.tipo)) f.probabilidad = "";
     });
+    if (!d.prioridad.n) d.prioridad.n = 5;
+    // Cruces solo entre una fila interna (F, D) y una columna externa (O, A) que existan
+    const tipoDe = {}; d.factores.forEach(f => { tipoDe[f.id] = f.tipo; });
+    Object.keys(d.cruces).forEach(k => { const [a, b] = k.split("|"); if (!esInterno(tipoDe[a]) || !tipoDe[b] || esInterno(tipoDe[b])) delete d.cruces[k]; });
     // Números únicos dentro de cada cuadrante (los repetidos o a 0 se renumeran al final)
     TIPOS.forEach(t => {
       const usados = new Set(), l = d.factores.filter(f => f.tipo === t);
@@ -474,6 +724,9 @@
     sugerirHorizonte, sugerirTitulo, sugerirMision, sugerirVision,
     revisarRedaccion, parecido,
     avisosObjeto, avisosFuentes, avisosInterno, avisosExterno, avisosDe,
+    nPrioridad, prioridad, esPrio, prioritarios, empatesCorte, sugerirMotivo, avisosPriorizar,
+    BLOQUES, ORDEN_BLOQUES, bloqueDe, estrategiaPropuesta, ESC_CRUCE, claveCruce, valorCruce, ejesCruce, resultadoCruces, avisosCruzar,
+    FORMATO_INTERCAMBIO, VERSION_INTERCAMBIO, paqueteIntercambio, leerIntercambio, ESTILOS_XLSX, hojasExcel,
     resumen, progreso, pasoPendiente, siguientePaso,
     tipoDeTexto, parsearFactores, incorporarFactores,
     ESQ, sanear, sanearDafo, sanearDatos, fusionar

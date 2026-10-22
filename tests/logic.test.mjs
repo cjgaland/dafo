@@ -143,6 +143,91 @@ eq("Ejemplo: debilidades de más peso", L.matrizDafo(ej).D.slice(0, 2).map(L.cod
 t("Ejemplo: todo con su dato", ej.factores.every(f => L.lleno(f.evidencia)));
 eq("Ejemplo: siguiente paso lleva a la matriz", L.siguientePaso({ dafos: [ej] }, 1).k, "listo");
 
+// ---------- Entrega 2 ----------
+// Prioridad
+const pz = L.nuevoDafo("pz", "t");
+pz.factores = [F("D", 1, "Uno", 5), F("D", 2, "Dos", 4), F("D", 3, "Tres", 3), F("D", 4, "Cuatro", 3), F("D", 5, "Cinco", 2), F("D", 6, "Seis", ""), F("F", 1, "Fuerte", 4)];
+pz.prioridad.n = 3;
+const mz = L.prioridad(pz), cod = l => l.map(L.codigo);
+eq("Prioridad: los N de más peso", cod(L.prioritarios(pz, "D")), ["D1", "D2", "D3"]);
+eq("Prioridad: sin peso nunca entra por criterio", mz[pz.factores[5].id].prio, false);
+eq("Empate en el corte", Object.keys(L.empatesCorte(pz)), ["D"]);
+eq("Empate: quién queda fuera", cod(L.empatesCorte(pz).D.fuera), ["D4"]);
+t("Aviso de empate", L.avisosPriorizar(pz).some(a => a.texto.includes("Empate en el corte")));
+t("Aviso de cuadrante vacío", L.avisosPriorizar(pz).some(a => a.texto.includes("No hay oportunidades")));
+pz.factores[4].manual = "si";
+eq("A mano: entra aunque pese poco", cod(L.prioritarios(pz, "D")), ["D1", "D2", "D3", "D5"]);
+t("A mano sin motivo avisa", L.avisosPriorizar(pz).some(a => a.factor === pz.factores[4].id && a.texto.includes("sin escribir el motivo")));
+t("A mano con menos peso que otro que queda fuera", L.avisosPriorizar(pz).some(a => a.texto.includes("D5 entra a mano") && a.texto.includes("D4")));
+pz.factores[0].manual = "no"; pz.factores[0].motivo = "Ya hay un proyecto";
+eq("A mano: se quita aunque pese mucho", cod(L.prioritarios(pz, "D")), ["D2", "D3", "D5"]);
+eq("Por qué es prioritario", [L.prioridad(pz)[pz.factores[1].id].por, L.prioridad(pz)[pz.factores[0].id].por], ["criterio", "manual"]);
+t("Motivo propuesto", L.sugerirMotivo(pz, pz.factores[2]).startsWith("Importancia 3; el 3.º de 6"));
+eq("N fuera de rango vuelve a 5", L.nPrioridad({ prioridad: { n: 99 } }), 5);
+
+// Cruces
+const cz = L.nuevoDafo("cz", "t");
+const f1 = F("F", 1, "Fortaleza", 5), d1 = F("D", 1, "Debilidad", 5), o1 = F("O", 1, "Oportunidad", 5, 5), o2 = F("O", 2, "Otra oportunidad", 4, 4), a1 = F("A", 1, "Amenaza", 5, 5);
+cz.factores = [f1, d1, o1, o2, a1];
+let rz = L.resultadoCruces(cz);
+eq("Cruces: casillas", [rz.total, rz.rellenas, rz.listo, rz.orientacion], [6, 0, false, null]);
+eq("Bloque de un cruce", [L.bloqueDe(f1, o1), L.bloqueDe(d1, a1)], ["FO", "DA"]);
+t("Aviso: casillas por valorar", L.avisosCruzar(cz).some(a => a.texto.includes("6 casillas por valorar")));
+cz.cruces[L.claveCruce(f1, o1)] = "3"; cz.cruces[L.claveCruce(f1, o2)] = "1"; cz.cruces[L.claveCruce(f1, a1)] = "1";
+cz.cruces[L.claveCruce(d1, o1)] = "2"; cz.cruces[L.claveCruce(d1, o2)] = "2";
+rz = L.resultadoCruces(cz);
+eq("Cruces incompletos: sin orientación", [rz.rellenas, rz.orientacion], [5, null]);
+eq("Valor de un cruce y vacío", [L.valorCruce(cz, f1, o1), L.valorCruce(cz, d1, a1)], [3, null]);
+cz.cruces[L.claveCruce(d1, a1)] = "0";
+rz = L.resultadoCruces(cz);
+eq("Medias por bloque", L.ORDEN_BLOQUES.map(k => rz.bloques[k].media), [2, 1, 2, 0]);
+eq("Orientación: el primero en caso de empate exacto", rz.orientacion, "FO");
+eq("Empate de orientación detectado", rz.empate, "DO");
+t("Aviso de empate de orientación", L.avisosCruzar(cz).some(a => a.texto.includes("pesan casi lo mismo")));
+eq("Cruces fuertes", rz.fuertes.map(x => L.codigo(x.fila) + L.codigo(x.col)), ["F1O1"]);
+eq("Estrategia propuesta por bloque", [L.estrategiaPropuesta(f1, o1), L.estrategiaPropuesta(d1, o2), L.estrategiaPropuesta(d1, a1)], ["Usar F1 para aprovechar O1", "Aprovechar O2 para corregir D1", "Reducir D1 para que A1 nos afecte menos"]);
+eq("Factores llave (media por fila o columna)", rz.llaves.map(x => L.codigo(x.f) + " " + x.media), ["O1 2.5", "F1 1.67", "O2 1.5"]);
+t("Progreso del paso 6 con todo valorado", L.progreso(cz)[6] === true);
+const sc = L.sanearDafo(Object.assign(JSON.parse(JSON.stringify(cz)), { cruces: Object.assign({}, cz.cruces, { "malo|x": "2", [o1.id + "|" + f1.id]: "1", [f1.id + "|" + o2.id + "|z"]: "1", [d1.id + "|" + o1.id]: "7" }) }), gid, "t");
+eq("Saneado de cruces: solo interno × externo, valores 0–3", Object.keys(sc.cruces).length, 5);
+
+// Intercambio
+const pq = L.paqueteIntercambio([ej], "2026.02", "2026-10-22T10:00:00Z");
+eq("Intercambio: cabecera", [pq.formato, pq.version, pq.app], ["dafo-came", 1, "dafo"]);
+const pd = pq.dafos[0];
+eq("Intercambio: orientación y criterio", [pd.orientacion, pd.criterio.n], ["reorientacion", 5]);
+eq("Intercambio: 24 factores, 20 prioritarios", [pd.factores.length, pd.factores.filter(f => f.prioritario).length], [24, 20]);
+const a1x = pd.factores.find(f => f.codigo === "A1");
+eq("Intercambio: números ya calculados", [a1x.importancia, a1x.probabilidad, a1x.peso, a1x.puesto, a1x.motivoPrioridad], [5, 5, 25, 1, "criterio"]);
+eq("Intercambio: los internos sin probabilidad", pd.factores.find(f => f.codigo === "F1").probabilidad, null);
+eq("Intercambio: 100 cruces con su bloque", [pd.cruces.length, pd.cruces.filter(x => x.bloque === "DO").length, pd.cruces.find(x => x.fila === "D2" && x.columna === "O5").valor], [100, 25, 3]);
+t("Intercambio: fuente con su nombre", pd.factores.find(f => f.codigo === "D5").fuente.includes("higiene de manos"));
+eq("Leer el paquete", L.leerIntercambio(pq).length, 1);
+eq("Leer desde la copia .json", L.leerIntercambio({ dafos: [], intercambio: pq }).length, 1);
+eq("Formato o versión distintos: nada", [L.leerIntercambio(Object.assign({}, pq, { version: 2 })), L.leerIntercambio({ formato: "amfe-fallos", version: 1, dafos: [] })], [null, null]);
+t("Intercambio en JSON sin pérdidas", JSON.parse(JSON.stringify(pq)).dafos[0].factores.length === 24);
+
+// Ejemplo de la UGC: priorización y cruces
+eq("Ejemplo: prioritarios", L.TIPOS.map(k => cod(L.prioritarios(ej, k)).join(" ")), ["F3 F1 F2 F4 F6", "D1 D2 D5 D3 D4", "O5 O4 O2 O1 O3", "A1 A2 A3 A4 A5"]);
+const rej = L.resultadoCruces(ej);
+eq("Ejemplo: 100 casillas valoradas", [rej.total, rej.rellenas], [100, 100]);
+eq("Ejemplo: medias por bloque", L.ORDEN_BLOQUES.map(k => rej.bloques[k].media), [1.2, 0.72, 1.4, 0.8]);
+eq("Ejemplo: orientación de reorientación", [rej.orientacion, rej.empate], ["DO", null]);
+eq("Ejemplo: factores llave", rej.llaves.map(x => L.codigo(x.f)), ["O4", "D1", "F3"]);
+eq("Ejemplo: 13 cruces fuertes", rej.fuertes.length, 13);
+eq("Ejemplo: sin avisos en los pasos 5 y 6", [5, 6].flatMap(p => L.avisosDe(ej, p)).map(a => a.texto), []);
+eq("Ejemplo: progreso de los pasos 5 y 6", [L.progreso(ej)[5], L.progreso(ej)[6]], [true, true]);
+
+// Excel
+const X = require("../xlsx.js");
+const libro = L.hojasExcel(ej, "22/10/2026");
+eq("Excel: hojas", libro.hojas.map(h => h.nombre), ["Factores", "Matriz DAFO", "Matriz cruzada", "Fuentes", "Ficha"]);
+eq("Excel: una fila por factor", libro.hojas[0].filas.length - 3, 24);
+t("Excel: estilos usados existen", libro.hojas.every(h => h.filas.every(f => f.every(c => !c || !c.estilo || L.ESTILOS_XLSX[c.estilo]))));
+const bytes = X.construirLibroXlsx(libro);
+t("Excel: se construye un .xlsx (ZIP)", bytes.length > 3000 && bytes[0] === 0x50 && bytes[1] === 0x4b);
+t("Excel de un DAFO vacío", X.construirLibroXlsx(L.hojasExcel(L.nuevoDafo("v", "t"), "hoy")).length > 1000);
+
 // Contenido
 eq("Aprende: 7 temas", C.TEMAS.map(x => x.n), [1, 2, 3, 4, 5, 6, 7]);
 t("Aprende: cada tema completo", C.TEMAS.every(x => x.titulo && x.minuto.length >= 3 && x.secciones.length >= 2 && x.minicaso && x.practica.href));

@@ -4,12 +4,13 @@
 //  Al cambiar cualquier archivo, incrementa CACHE_NAME.
 // ============================================================
 
-const CACHE_NAME = "dafo-v1";
+const CACHE_NAME = "dafo-v2";
 
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./xlsx.js",
   "./logic.js",
   "./contenido.js",
   "./app.js",

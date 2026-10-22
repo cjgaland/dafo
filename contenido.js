@@ -186,6 +186,12 @@
   const fte = (id, tipo, nombre, fecha, nota) => ({ id: "ej-fu-" + id, tipo, nombre, fecha, nota });
   const fac = (tipo, num, texto, area, evidencia, fuente, importancia, probabilidad = "", aporta = "datos") =>
     ({ id: `ej-fa-${tipo}${num}`, tipo, num, texto, area, evidencia, fuenteId: fuente ? "ej-fu-" + fuente : "", aporta, importancia: String(importancia), probabilidad: String(probabilidad) });
+  // Matriz cruzada escrita como tabla: filas y columnas por código, valores 0–3
+  const cruces = (filas, cols, valores) => {
+    const r = {};
+    filas.forEach((f, i) => cols.forEach((c, j) => { r[`ej-fa-${f}|ej-fa-${c}`] = String(valores[i][j]); }));
+    return r;
+  };
   const DAFO_UGC = {
     id: "ej-dafo-ugc", titulo: "DAFO UGC de Atención Primaria 2027", objeto: "UGC de Atención Primaria", tipoObjeto: "ugc", finalidad: "acuerdo",
     horizonte: "1 año (el del acuerdo de gestión 2027), preparando también la acreditación",
@@ -209,7 +215,7 @@
       fac("F", 2, "Control de la diabetes por encima de la media del Distrito", "resultados", "62 % de pacientes con HbA1c menor de 8 % (Distrito: 54 %)", "ind", 4),
       fac("F", 3, "Enfermería gestora de casos consolidada, con 140 pacientes crónicos complejos en seguimiento", "procesos", "Registro de gestión de casos 2026", "mem", 5),
       fac("F", 4, "Cultura de notificación de incidentes: 38 notificaciones en el último año", "seguridad", "La mayoría sin daño; 3 análisis hechos", "not", 3),
-      fac("F", 5, "Buena valoración de los pacientes en la encuesta de satisfacción", "ciudadania", "91 % satisfechos o muy satisfechos", "enc", 3, "", "pacientes"),
+      fac("F", 5, "Buena valoración de los pacientes en la encuesta de satisfacción", "ciudadania", "91 % satisfechos o muy satisfechos", "enc", 2, "", "pacientes"),
       fac("F", 6, "Unidad docente acreditada con residentes de Medicina Familiar y Comunitaria y de Enfermería", "docencia", "4 residentes por año", "mem", 3, "", "equipo"),
       fac("D", 1, "Demora media de 6 días para cita con medicina de familia (objetivo del acuerdo: 48 horas)", "resultados", "Acuerdo de gestión 2026: objetivo no cumplido", "ag", 5),
       fac("D", 2, "Conciliación de la medicación tras el alta hospitalaria en el 45 % de los casos", "seguridad", "Estándar del acuerdo: 80 %", "ag", 5),
@@ -230,6 +236,22 @@
       fac("A", 5, "Caídas del sistema corporativo de historia digital varias veces al año, que paralizan la consulta", "tecnologico", "5 incidentes notificados; dependen de los servicios centrales", "not", 3, 3),
       fac("A", 6, "Bulos sanitarios en redes sociales que generan consultas evitables", "social", "Percepción del equipo; sin datos", "", 2, 3, "equipo")
     ],
+    prioridad: { n: 5 },
+    cruces: cruces(
+      ["F3", "F1", "F2", "F4", "F6", "D1", "D2", "D5", "D3", "D4"],
+      ["O5", "O4", "O2", "O1", "O3", "A1", "A2", "A3", "A4", "A5"],
+      [ // FO y FA (fortalezas) · DO y DA (debilidades)
+        [3, 1, 3, 1, 2, /**/ 3, 1, 1, 1, 0],   // F3 enfermería gestora de casos
+        [1, 2, 1, 1, 1, /**/ 1, 2, 1, 1, 0],   // F1 equipo estable
+        [1, 1, 2, 0, 2, /**/ 2, 0, 0, 0, 0],   // F2 control de la diabetes
+        [0, 2, 0, 2, 0, /**/ 0, 0, 0, 0, 1],   // F4 cultura de notificación
+        [1, 1, 1, 1, 0, /**/ 0, 3, 1, 0, 0],   // F6 unidad docente
+        [1, 2, 3, 1, 1, /**/ 3, 3, 3, 1, 1],   // D1 demora de 6 días
+        [3, 3, 1, 2, 1, /**/ 2, 0, 0, 0, 1],   // D2 conciliación de la medicación
+        [0, 3, 0, 2, 0, /**/ 1, 0, 1, 0, 0],   // D5 higiene de manos
+        [1, 3, 1, 1, 0, /**/ 1, 1, 0, 0, 0],   // D3 protocolos sin revisar
+        [1, 2, 0, 3, 0, /**/ 0, 1, 0, 0, 1]    // D4 formación en seguridad
+      ]),
     notas: "Ejemplo inventado: la UGC, sus cifras y sus fuentes no corresponden a ningún centro real.",
     creado: "2026-10-22T08:00:00.000Z", modificado: "2026-10-22T08:00:00.000Z"
   };
@@ -240,7 +262,9 @@
       { t: "1 · Qué analizamos", s: "Objeto, finalidad (acuerdo de gestión), horizonte, misión y visión", href: "#/dafo/ej-dafo-ugc/1" },
       { t: "2 · Fuentes", s: "Ocho fuentes de datos: acuerdo, encuestas, notificaciones, indicadores…", href: "#/dafo/ej-dafo-ugc/2" },
       { t: "3 · Dentro", s: "6 fortalezas y 6 debilidades, cada una con su dato", href: "#/dafo/ej-dafo-ugc/3" },
-      { t: "4 · Fuera", s: "6 oportunidades y 6 amenazas con importancia y probabilidad", href: "#/dafo/ej-dafo-ugc/4" }
+      { t: "4 · Fuera", s: "6 oportunidades y 6 amenazas con importancia y probabilidad", href: "#/dafo/ej-dafo-ugc/4" },
+      { t: "5 · Priorizar", s: "Los 5 de más peso de cada cuadrante", href: "#/dafo/ej-dafo-ugc/5" },
+      { t: "6 · Cruzar", s: "Matriz cruzada de 100 casillas: orientación de reorientación (DO)", href: "#/dafo/ej-dafo-ugc/6" }
     ]
   };
 
