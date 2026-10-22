@@ -421,6 +421,52 @@ eq("Ejemplo: equipo, sesiones, ideas, bloques y votos", [ej.equipo.length, ej.se
 eq("Ejemplo: sin avisos de ideas ni de votos", [...L.avisosDe(ej, "ideas"), ...L.avisosDe(ej, "votar"), ...L.avisosEquipo(ej)].map(x => x.texto), []);
 eq("Ejemplo: recuento de D", L.ranking(ej, "D").map(r => r.b.nombre + " " + r.total), ["Demora para la cita 21", "Conciliación al alta 17", "Higiene de manos 10"]);
 
+// ---------- Entrega 5 ----------
+// Traer de AMFE
+const paqAmfe = { formato: "amfe-fallos", version: 1, app: "amfe", amfes: [
+  { id: "am1", titulo: "AMFE conciliación", proceso: "Conciliación de la medicación al alta", fecha: "2026", fallos: [
+    { prioritario: true, ipr: 343, acciones: [], residual: null }, { prioritario: true, ipr: 210, acciones: [{ que: "x" }], residual: null }, { prioritario: false, ipr: 80, acciones: [] }] },
+  { id: "am2", titulo: "AMFE transfusión", proceso: "Transfusión", fecha: "2025", fallos: [
+    { prioritario: true, ipr: 300, acciones: [{ que: "x" }], residual: { ipr: 120 } }, { prioritario: true, ipr: 200, acciones: [{ que: "y" }], residual: { ipr: 80 } }] }] };
+const la = L.leerAmfe(paqAmfe);
+eq("Traer de AMFE: un factor por AMFE", la.map(x => x.factor.tipo + ":" + x.factor.importancia), ["D:5", "F:3"]);
+t("Traer de AMFE: debilidad con fallos sin acción", la[0].factor.texto === "El proceso «Conciliación de la medicación al alta» tiene 2 fallos prioritarios en su AMFE, 1 sin acción de mejora");
+t("Traer de AMFE: dato con la bajada del riesgo", la[1].factor.evidencia.includes("bajaría de 500 a 200 (−60 %)"));
+eq("Traer de AMFE desde la copia .json", L.leerAmfe({ amfes: [], intercambio: paqAmfe }).length, 2);
+eq("Traer de AMFE: formato o versión distintos", [L.leerAmfe({ formato: "amfe-fallos", version: 2, amfes: [] }), L.leerAmfe(L.paqueteIntercambio([], "x", "y")), L.leerAmfe(null)], [null, null, null]);
+const ta = L.nuevoDafo("ta", "t");
+const fa1 = L.factorDeAmfe(ta, la[0], gid);
+eq("Factor traído con su fuente", [L.codigo(fa1), fa1.area, ta.fuentes.length, ta.fuentes[0].tipo, fa1.fuenteId === ta.fuentes[0].id, fa1.origen], ["D1", "seguridad", 1, "amfe", true, "amfe:am1"]);
+eq("No se trae dos veces", L.factorDeAmfe(ta, la[0], gid), null);
+t("El origen se conserva al guardar", L.sanearDafo(JSON.parse(JSON.stringify(ta)), gid, "t").factores[0].origen === "amfe:am1");
+
+// Ponte a prueba y ejercicios
+eq("Test: 20 preguntas, 5 por bloque", [C.TEST.length, ...Object.keys(C.TEMAS_TEST).map(k => C.TEST.filter(q => q.t === Number(k)).length)], [20, 5, 5, 5, 5]);
+t("Test: cada pregunta con su respuesta y su explicación", C.TEST.every(q => q.o.length >= 4 && q.ok >= 0 && q.ok < q.o.length && q.e.length > 30));
+t("Test: cada bloque enlaza a un tema de Aprende", Object.values(C.TEMAS_TEST).every(b => C.TEMAS.some(x => x.n === b.aprende)));
+t("Test: la respuesta correcta no está siempre en el mismo sitio", new Set(C.TEST.map(q => q.ok)).size >= 3);
+eq("Ejercicios", [C.EJERCICIOS.clasifica.length, C.EJERCICIOS.sirve.length, C.EJERCICIOS.came.length], [10, 9, 6]);
+t("Ejercicio 1: de los cuatro tipos", L.TIPOS.every(tp => C.EJERCICIOS.clasifica.some(x => x.tipo === tp)));
+// La app detecta lo mismo que el ejercicio 2 dice (soluciones y vagos)
+eq("Ejercicio 2: la app reconoce soluciones y vagos", C.EJERCICIOS.sirve.map(x => { const r = L.revisarRedaccion(x.texto, "D").map(y => y.k); return r.includes("solucion") ? "solucion" : r.includes("vago") ? "vago" : "bien"; }), C.EJERCICIOS.sirve.map(x => x.k));
+eq("Ejercicio 3: la estrategia es la del bloque del cruce", C.EJERCICIOS.came.map(x => L.CAME_DE_BLOQUE[x.tf + x.tc]), C.EJERCICIOS.came.map(x => x.came));
+
+// Minicasos
+const MC = C.EJEMPLOS.dafos.slice(2).map(x => L.sanearDafo(JSON.parse(JSON.stringify(x)), gid, "t"));
+const mc = id => MC.find(x => x.id === id);
+eq("Minicasos", [MC.length, C.EJEMPLOS.minicasos.length, MC.every(x => /^ej-mini-/.test(x.id))], [6, 6, true]);
+t("Minicasos: todas las áreas válidas", MC.every(x => x.factores.every(f => f.area)));
+eq("Urgencias: los cuatro errores a la vista", ["externo", "solucion", "interno", "vago"].map(k => [3, 4].some(p => L.avisosDe(mc("ej-mini-urg"), p).some(a => a.k === k))), [true, true, true, true]);
+eq("Farmacia: el peso ordena las amenazas", L.matrizDafo(mc("ej-mini-far")).A.map(f => L.codigo(f) + ":" + L.peso(f)), ["A1:15", "A3:12", "A2:5"]);
+eq("Proyecto: tipo y finalidad", [mc("ej-mini-her").tipoObjeto, mc("ej-mini-her").finalidad], ["proyecto", "proyecto"]);
+t("Proyecto: la amenaza que más pesa sin estrategia", L.avisosEstrategias(mc("ej-mini-her")).some(a => a.texto.includes("(A1:")));
+const rcal = L.resultadoCruces(mc("ej-mini-cal"));
+eq("Unidad de Calidad: orientación ofensiva", [rcal.listo, rcal.orientacion, rcal.total], [true, "FO", 36]);
+t("Bloque quirúrgico: todas de un tipo y lo que más pesa sin respuesta", ["Todas las estrategias elegidas son de «mantener»", "(D1:", "(A1:"].every(k => L.avisosEstrategias(mc("ej-mini-qui")).some(a => a.texto.includes(k))));
+eq("Hospital de día: objetivo vago y acción incompleta", ["ninguna cifra", "no tiene fecha", "E1.1: falta responsable, fecha de fin y indicador"].map(k => L.avisosPlan(mc("ej-mini-onc"), "2026-10-22").some(a => a.texto.includes(k))), [true, true, true]);
+t("Hospital de día: la segunda estrategia está bien", !L.avisosPlan(mc("ej-mini-onc"), "2026-10-22").some(a => a.texto.startsWith("E2")));
+t("Minicasos: los documentos no fallan", MC.every(x => [L.documentoInforme, L.documentoResumen, L.documentoLamina, L.documentoHoja].every(f => f(x, "hoy").bloques.length > 2)));
+
 // Contenido
 eq("Aprende: 7 temas", C.TEMAS.map(x => x.n), [1, 2, 3, 4, 5, 6, 7]);
 t("Aprende: cada tema completo", C.TEMAS.every(x => x.titulo && x.minuto.length >= 3 && x.secciones.length >= 2 && x.minicaso && x.practica.href));

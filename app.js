@@ -14,8 +14,14 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.04";
+  const APP_VERSION = "2026.05";
   const NOVEDADES = [
+    { version: "2026.05", fecha: "Octubre 2026", titulo: "Ponte a prueba, minicasos y «Traer de AMFE»", cambios: [
+      "«Ponte a prueba»: 20 preguntas en cuatro bloques, con su explicación y un enlace al tema de «Aprende» que conviene repasar.",
+      "Tres ejercicios prácticos: ¿fortaleza, debilidad, oportunidad o amenaza?, ¿sirve como factor? y ¿qué estrategia CAME sale de este cruce?",
+      "Seis minicasos para practicar un paso concreto: Urgencias, Farmacia, un proyecto nuevo, la Unidad de Calidad, el bloque quirúrgico y un hospital de día.",
+      "«Traer de AMFE» en el paso 3: los AMFE de la app AMFE (de este navegador o de su copia) se proponen como debilidad o fortaleza, con su dato y su fuente.",
+      "Todas las entregas del diseño, terminadas."] },
     { version: "2026.04", fecha: "Octubre 2026", titulo: "Trabajo en equipo", cambios: [
       "Paso 2: el equipo (perfil, cargo y papel) y las sesiones de trabajo, con asistentes y resultados, y avisos si el equipo es de un solo estamento o solo de dirección.",
       "Lluvia de ideas cuadrante a cuadrante, con preguntas guía, agrupación en bloques, aviso de ideas parecidas y técnica de grupo nominal (3, 2 y 1 puntos). Ideas y bloques pasan a factores con un toque.",
@@ -50,7 +56,7 @@
       "Pegar los factores desde Excel, Calc o Word.",
       "Matriz DAFO imprimible y en PDF, ejemplo completo de una UGC de Atención Primaria, Aprende (7 temas), glosario y copia de seguridad."] }
   ];
-  const ENTREGA = 4;   // pasos ya construidos (ver L.PASOS[].entrega)
+  const ENTREGA = 5;   // pasos ya construidos (ver L.PASOS[].entrega)
 
   // ---------- Utilidades ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -227,6 +233,7 @@
       <div class="guide">
         <a class="guide-card" href="#/ejemplos"><span class="guide-num">Ej</span><div><div class="guide-q">Ejemplo</div><div class="guide-a">El DAFO de una <b>UGC de Atención Primaria</b> que prepara su acuerdo de gestión: 24 factores, cada uno con su dato.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/aprende"><span class="guide-num">?</span><div><div class="guide-q">Aprende</div><div class="guide-a">${C.TEMAS.length} temas <b>explicados fácil</b>: del qué es un DAFO al plan de acción.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card" href="#/prueba"><span class="guide-num">✎</span><div><div class="guide-q">Ponte a prueba</div><div class="guide-a">${C.TEST.length} preguntas y <b>tres ejercicios</b>: ¿interno o externo?, ¿sirve como factor?, ¿qué estrategia sale?</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/glosario"><span class="guide-num">A–Z</span><div><div class="guide-q">Glosario</div><div class="guide-a">${C.GLOSARIO.length} términos <b>en lenguaje llano</b>, con buscador.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_AMFE}" target="_blank" rel="noopener"><span class="guide-num">!</span><div><div class="guide-q">AMFE ↗</div><div class="guide-a">App hermana: si una debilidad es un <b>proceso con riesgo</b> para el paciente, analiza qué puede fallar en él.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_AUD}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Auditorías ↗</div><div class="guide-a">App hermana: <b>mide con una auditoría</b> si una práctica se cumple (higiene de manos, registros…).</div></div><span class="guide-go">›</span></a>
@@ -444,8 +451,9 @@
           ${trampa("Una oportunidad que nadie va a aprovechar es solo un deseo; y «nuestro equipo está poco formado» no es una amenaza aunque preocupe: depende de vosotros.")}`)}`;
     return `${ayuda}
       ${guiaHtml(n)}
-      <div class="toolbar no-print"><a class="btn" href="#/dafo/${d.id}/ideas">💡 Lluvia de ideas</a><button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>${d.factores.length ? `<button class="btn" data-act="informe">Ver matriz DAFO / PDF</button><button class="btn" data-act="excel">⬇ Excel</button>` : ""}</div>
+      <div class="toolbar no-print"><a class="btn" href="#/dafo/${d.id}/ideas">💡 Lluvia de ideas</a><button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>${n === 3 ? `<button class="btn" data-act="amfe-traer">Traer de AMFE</button>` : ""}${d.factores.length ? `<button class="btn" data-act="informe">Ver matriz DAFO / PDF</button><button class="btn" data-act="excel">⬇ Excel</button>` : ""}</div>
       ${pegarAbierto ? pegarHtml(n) : ""}
+      ${n === 3 && amfeLista ? amfeHtml(d) : ""}
       <div data-zona="avisos">${avisosGenerales(d, n)}</div>
       ${interno ? `<div class="seg seg--mini vista-int no-print" role="group" aria-label="Forma de ver el análisis interno"><button type="button" class="${vistaInt() === "areas" ? "active" : ""}" data-act="vista-int" data-v="areas">Por cuadrantes</button><button type="button" class="${vistaInt() === "acsa" ? "active" : ""}" data-act="vista-int" data-v="acsa">Por bloques ACSA</button></div>` : ""}
       ${interno && vistaInt() === "acsa" ? acsaHtml(d) : `<div class="cuad-2">${columna(d, t1)}${columna(d, t2)}</div>`}
@@ -960,6 +968,19 @@
     } catch (e) { toast("No se ha podido crear el Word.", 4000); }
   }
 
+  // ---------- Traer de AMFE ----------
+  let amfeLista = null;   // AMFE leídos de la app AMFE (de este navegador o de su copia)
+  function amfeHtml(d) {
+    return `<div class="card pegar no-print">
+      <h3 class="sub-h">Traer de AMFE</h3>
+      <p class="field-sub">Cada AMFE hecho en la app AMFE dice mucho de un proceso: si tiene fallos prioritarios sin acción, es una <b>debilidad</b>; si sus riesgos ya están controlados, una <b>fortaleza</b>. La app propone el factor con su dato; revísalo después.</p>
+      ${amfeLista.length ? `<div class="pf-lista">${amfeLista.map((x, i) => { const ya = d.factores.find(f => f.origen === "amfe:" + x.id); return `<div class="pf q-${x.factor.tipo}">
+        <div class="pf-cab"><span class="fx-cod q-${x.factor.tipo}">${x.factor.tipo}</span><span class="pf-txt"><b>${esc(x.factor.texto)}</b><span>${esc(x.factor.evidencia)}</span></span></div>
+        <div class="pf-acc">${ya ? `<span class="badge">✓ Ya es ${L.codigo(ya)}</span>` : `<button type="button" class="btn btn--sm btn--primary" data-act="amfe-add" data-i="${i}">Añadir como ${Q[x.factor.tipo].uno}</button>`}</div></div>`; }).join("")}</div>` : `<p class="placeholder-box">Esa copia no tiene ningún AMFE.</p>`}
+      <div class="toolbar"><button class="btn" data-act="amfe-copia">Cargar la copia de AMFE (.json)</button><button class="btn" data-act="amfe-cerrar">Cerrar</button></div>
+    </div>`;
+  }
+
   // ---------- Matriz DAFO (2 × 2) ----------
   // soloPrio: con la entrega 2, los prioritarios destacan y el resto se ve atenuado
   function celdaMatriz(d, m, t, pm) {
@@ -1061,6 +1082,57 @@
       <div class="wiz-nav no-print">${prev ? `<a class="btn" href="#/aprende/${prev.n}">← ${prev.titulo}</a>` : "<span></span>"}${next ? `<a class="btn" href="#/aprende/${next.n}">${next.titulo} →</a>` : "<span></span>"}</div>`;
   }
 
+  // ---------- Ponte a prueba ----------
+  const respuestas = {}, respEj = { clasifica: {}, sirve: {}, came: {} };
+  // Orden de las opciones barajado pero estable (para que la correcta no esté siempre en el mismo sitio)
+  const barajar = (n, semilla) => { const a = Array.from({ length: n }, (_, i) => i); let s = semilla * 9301 + 49297; for (let i = n - 1; i > 0; i--) { s = (s * 9301 + 49297) % 233280; const j = Math.floor(s / 233280 * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pillsPrueba = act => `<div class="tema-pills prueba-pills no-print"><a href="#/prueba" class="pdca--P${!act ? " actual" : ""}" title="Todas las preguntas">T</a>${Object.keys(C.TEMAS_TEST).map(k => `<a href="#/prueba/${k}" class="pdca--P${String(act) === k ? " actual" : ""}" title="${esc(C.TEMAS_TEST[k].nom)}">${k}</a>`).join("")}<a href="#/prueba/practica" class="pdca--V${act === "practica" ? " actual" : ""}" title="Ejercicios prácticos">✎</a></div>`;
+  function marcadorHtml(Q) {
+    const hechas = Q.filter(q => q.i in respuestas), bien = hechas.filter(q => respuestas[q.i] === q.ok).length;
+    if (!hechas.length) return `<span class="field-sub">Aciertos: 0 de ${Q.length}</span>`;
+    const p = bien / hechas.length;
+    return `<span><b>${bien}</b> ${bien === 1 ? "acierto" : "aciertos"} de ${hechas.length} ${hechas.length === 1 ? "respondida" : "respondidas"} (de ${Q.length})</span>${hechas.length === Q.length ? `<span class="sem-b sem-b--${p >= 0.8 ? "verde" : p >= 0.6 ? "ambar" : "rojo"}">${p >= 0.8 ? "¡Muy bien!" : p >= 0.6 ? "Bien: repasa los fallos" : "Repasa «Aprende»"}</span>` : ""}`;
+  }
+  function renderPrueba(bloque) {
+    if (bloque === "practica") { renderPractica(); return; }
+    const Q = C.TEST.map((q, i) => Object.assign({ i }, q)).filter(q => !bloque || q.t === bloque);
+    view.innerHTML = `
+      <h1 class="page-title">Ponte a prueba</h1>
+      <p class="page-lead">${C.TEST.length} preguntas sobre el DAFO y el CAME${bloque ? ` (aquí, las del bloque «${esc(C.TEMAS_TEST[bloque].nom)}»)` : ""}. Toca la respuesta que creas correcta y lee la explicación. En ✎, tres ejercicios prácticos.</p>
+      ${pillsPrueba(bloque)}
+      <div class="marcador" data-zona="marcador">${marcadorHtml(Q)}</div>
+      <div class="card">${Q.map(q => { const ord = barajar(q.o.length, q.i + 1), r = respuestas[q.i]; return `<div class="quiz-q" data-q="${q.i}">
+        <p><span class="badge">${esc(C.TEMAS_TEST[q.t].nom)}</span> <b>${esc(q.q)}</b></p>
+        ${ord.map(j => `<button class="quiz-o${r != null ? (j === q.ok ? " quiz-o--ok" : j === r ? " quiz-o--mal" : "") : ""}" data-act="quiz" data-q="${q.i}" data-o="${j}">${esc(q.o[j])}</button>`).join("")}
+        <p class="quiz-fb"${r == null ? " hidden" : ""}>${r != null ? `${r === q.ok ? "<b>¡Correcto!</b> " : "<b>No.</b> "}${esc(q.e)} <a href="#/aprende/${C.TEMAS_TEST[q.t].aprende}">Repasar en «Aprende»</a>` : ""}</p>
+      </div>`; }).join("")}</div>
+      <div class="toolbar no-print"><button class="btn" data-act="quiz-reset">Empezar de nuevo</button><a class="btn btn--primary" href="#/prueba/practica">Ejercicios prácticos →</a></div>`;
+  }
+  const NOM_SIRVE = { bien: "Buen factor", solucion: "Es una solución", vago: "Es vago" };
+  const EXPLICA_SIRVE = { bien: "Es concreto y tiene un dato: se podrá comprobar el año que viene si ha cambiado.", solucion: "Dice lo que hay que hacer, no la situación. Primero se describe el problema (con su dato); la solución vendrá en las estrategias.", vago: "Es tan general que no lleva a ninguna decisión. ¿Qué exactamente?, ¿desde cuándo?, ¿qué dato lo muestra?" };
+  function ejercicio(k, titulo, sub, items, opciones, correcta, fb) {
+    const R = respEj[k], hechas = Object.keys(R).length, bien = items.filter((x, i) => R[i] === correcta(x)).length;
+    return `<h2 class="sec-t">${titulo}</h2><p class="field-sub">${sub} ${hechas ? `<b>${bien} de ${hechas}</b> bien.` : ""}</p>
+      <div class="card">${items.map((x, i) => { const r = R[i], ok = correcta(x); return `<div class="quiz-q fec-q">
+        ${x.html}
+        <div class="seg seg--wrap" role="group">${opciones.map(([v, t]) => `<button type="button" class="${r === v ? (v === ok ? "fec-ok" : "fec-mal") : r && v === ok ? "fec-ok" : ""}" data-act="ej" data-k="${k}" data-i="${i}" data-v="${v}">${t}</button>`).join("")}</div>
+        ${r ? `<p class="quiz-fb">${r === ok ? "<b>¡Correcto!</b> " : "<b>No.</b> "}${fb(x)}</p>` : ""}</div>`; }).join("")}</div>`;
+  }
+  function renderPractica() {
+    const E = C.EJERCICIOS;
+    view.innerHTML = `
+      <h1 class="page-title">Ponte a prueba · ejercicios</h1>
+      <p class="page-lead">Tres ejercicios con frases como las de un DAFO real, para practicar lo que más cuesta al empezar.</p>
+      ${pillsPrueba("practica")}
+      ${ejercicio("clasifica", "1. ¿Fortaleza, debilidad, oportunidad o amenaza?", "En el DAFO de una UGC de Atención Primaria. Recuerda: si lo podéis cambiar vosotros, es interno; si viene de fuera, externo.",
+        E.clasifica.map(x => Object.assign({ html: `<p><b>«${esc(x.texto)}»</b></p>` }, x)), L.TIPOS.map(t => [t, Q[t].uno[0].toUpperCase() + Q[t].uno.slice(1)]), x => x.tipo, x => `Es ${Q[x.tipo].art} <b>${Q[x.tipo].uno}</b>. ${esc(x.por)}`)}
+      ${ejercicio("sirve", "2. ¿Sirve como factor?", "Un buen factor es concreto y tiene un dato; ni es una solución ni es vago.",
+        E.sirve.map(x => Object.assign({ html: `<p><b>«${esc(x.texto)}»</b></p>` }, x)), Object.entries(NOM_SIRVE), x => x.k, x => EXPLICA_SIRVE[x.k])}
+      ${ejercicio("came", "3. ¿Qué estrategia CAME sale de este cruce?", "FO → explotar; FA → mantener; DO → corregir; DA → afrontar.",
+        E.came.map(x => Object.assign({ html: `<p><span class="fx-cod q-${x.tf}">${x.tf}</span> ${esc(x.fila)}<br><span class="fx-cod q-${x.tc}">${x.tc}</span> ${esc(x.col)}</p>` }, x)), L.TIPOS_CAME.map(k => [k, L.CAME[k].nom]), x => x.came, x => `Es un cruce ${x.tf}${x.tc}: <b>${L.CAME[x.came].nom.toLowerCase()}</b>. ${esc(L.CAME[x.came].que)}`)}
+      <div class="toolbar no-print"><button class="btn" data-act="practica-reset">Empezar de nuevo</button><a class="btn" href="#/prueba">← Preguntas del test</a></div>`;
+  }
+
   // ---------- Ejemplos ----------
   function renderEjemplos() {
     view.innerHTML = `
@@ -1070,7 +1142,8 @@
       <p class="field-sub">Una UGC inventada (un centro de salud y dos consultorios, 22.000 habitantes) prepara su <b>acuerdo de gestión</b> y la acreditación. Ocho fuentes de datos y 24 factores, cada uno con su dato: el factor externo de más peso es el <i>envejecimiento de la población</i> (5 × 5 = 25); las debilidades más importantes, la <i>demora de 6 días</i> y la <i>conciliación de la medicación al 45 %</i>. Con los 5 de más peso de cada cuadrante, la matriz cruzada (100 casillas) da una orientación <b>de reorientación</b>: el entorno ofrece oportunidades que hoy sus debilidades no dejan aprovechar.</p>
       <div class="ej-grid">${C.EJEMPLOS.fichas.map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}<a class="ej-card" href="#/dafo/ej-dafo-ugc/4?informe=1"><b>Matriz DAFO</b><span>Todo en una vista imprimible</span></a></div>
       <h2 class="sec-t">Minicasos</h2>
-      <p class="placeholder-box">Próximamente: casos cortos (Urgencias, Farmacia, un proyecto nuevo, el bloque quirúrgico…) para practicar cada paso.</p>
+      <p class="field-sub">DAFO cortos e inventados, cada uno con los errores típicos del paso que trabaja. Se abren en ese paso: mira los avisos y corrígelos.</p>
+      <div class="ej-grid ej-grid--mini">${C.EJEMPLOS.minicasos.map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}</div>
       ${practica("Las cifras del ejemplo son inventadas. Usa siempre los datos de tu unidad.")}`;
   }
 
@@ -1342,7 +1415,7 @@
   }
 
   // ---------- Enrutado ----------
-  const NAV = [["", "Inicio"], ["dafo", "Mis DAFO"], ["ejemplos", "Ejemplos"], ["aprende", "Aprende"], ["glosario", "Glosario"]];
+  const NAV = [["", "Inicio"], ["dafo", "Mis DAFO"], ["ejemplos", "Ejemplos"], ["aprende", "Aprende"], ["prueba", "Ponte a prueba"], ["glosario", "Glosario"]];
   function buildNav() { $("#calc-nav").innerHTML = NAV.map(([r, t]) => `<a href="#/${r}" data-r="${r}">${t}</a>`).join(""); }
   function noEncontrado(que, href, txt) { view.innerHTML = `<div class="error-box">No se encuentra ${que} en este dispositivo.</div><p><a href="${href}">${txt}</a></p>`; }
   let previo = null, docActual = "";
@@ -1365,7 +1438,7 @@
       const d = buscaDafo(partes[1]) || borradores.get(partes[1]);
       if (!d) noEncontrado("ese DAFO", "#/dafo", "Ir a mis DAFO");
       else {
-        if (previo !== d.id) { abiertos.clear(); pegarAbierto = false; previo = d.id; }
+        if (previo !== d.id) { abiertos.clear(); pegarAbierto = false; amfeLista = null; previo = d.id; }
         let n = HERRAMIENTAS[partes[2]] ? partes[2] : parseInt(partes[2], 10);
         if (!HERRAMIENTAS[n] && !(n >= 1 && n <= 8)) { const p = L.pasoPendiente(d, ENTREGA); n = p ? p.n : 1; history.replaceState(null, "", `#/dafo/${d.id}/${n}${informe ? "?informe=1" : ""}`); }
         renderDafo(d, n);
@@ -1375,6 +1448,7 @@
     else if (partes[0] === "ejemplos") renderEjemplos();
     else if (partes[0] === "aprende") renderAprende(parseInt(partes[1], 10) || 0);
     else if (partes[0] === "glosario") renderGlosario();
+    else if (partes[0] === "prueba") renderPrueba(partes[1] === "practica" ? "practica" : Number(partes[1]) || 0);
     else { renderHome(); navR = ""; }
     if (modoEjemplo) navR = "ejemplos";
     if (informe) { $$("details").forEach(d => { d.open = true; }); if (esIOS()) prepararPDF(); }
@@ -1671,6 +1745,26 @@
     else if (act === "ch-del" && d) { d.control.historial.splice(Number(b.dataset.i), 1); tocado(d); repintar(); }
     else if (act === "doc-ver") irInforme(b.dataset.doc);
     else if (act === "doc-word" && d) descargarWord(d, b.dataset.doc);
+    else if (act === "amfe-traer" && d) {
+      let l = null; try { l = L.leerAmfe(JSON.parse(leer("amfe-intercambio") || "null")); } catch (er) { /* */ }
+      if (l && l.length) { amfeLista = l; repintar(); }
+      else confirmar("<p>No hay ningún AMFE de la app <b>AMFE</b> en este navegador.</p><p>Si lo tienes en otro dispositivo, carga su copia de seguridad (.json).</p>", "Cargar la copia", () => $("#input-amfe").click(), { titulo: "Traer de AMFE", peligro: false });
+    }
+    else if (act === "amfe-copia") $("#input-amfe").click();
+    else if (act === "amfe-cerrar") { amfeLista = null; repintar(); }
+    else if (act === "amfe-add" && d) {
+      const x = amfeLista && amfeLista[Number(b.dataset.i)]; if (!x) return;
+      const f = L.factorDeAmfe(d, x, genId); if (!f) return;
+      tocado(d); repintar(); toast(`Añadido ${L.codigo(f)} con su fuente. Revisa el texto y la importancia.`, 3500);
+    }
+    else if (act === "quiz") {
+      const qi = Number(b.dataset.q), q = C.TEST[qi]; if (!q || qi in respuestas) return;
+      respuestas[qi] = Number(b.dataset.o);
+      const y = window.scrollY; renderPrueba(Number(rutaActual().split("/")[2]) || 0); window.scrollTo(0, y);
+    }
+    else if (act === "quiz-reset") { Object.keys(respuestas).forEach(k => delete respuestas[k]); renderPrueba(Number(rutaActual().split("/")[2]) || 0); }
+    else if (act === "ej") { const R = respEj[b.dataset.k], i = Number(b.dataset.i); if (R && !(i in R)) { R[i] = b.dataset.v; const y = window.scrollY; renderPractica(); window.scrollTo(0, y); } }
+    else if (act === "practica-reset") { Object.values(respEj).forEach(R => Object.keys(R).forEach(k => delete R[k])); renderPractica(); }
     else if (act === "pegar-abrir") { pegarAbierto = true; repintar(); const el = $("#pegar-txt"); if (el) el.focus(); }
     else if (act === "pegar-cerrar") { pegarAbierto = false; repintar(); }
     else if (act === "pegar-ok" && d) {
@@ -1695,6 +1789,17 @@
   });
   $("#banner-copiar").addEventListener("click", copiarAMisDatos);
   $("#input-importar").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) importar(f); e.target.value = ""; });
+  // Copia de seguridad de la app AMFE (para «Traer de AMFE» desde otro dispositivo)
+  $("#input-amfe").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let l = null; try { l = L.leerAmfe(JSON.parse(fr.result)); } catch (er) { /* */ }
+      if (!l) { toast("Ese archivo no es una copia de la app AMFE (o es de una versión que esta app no entiende).", 4500); return; }
+      amfeLista = l; if (actual) repintar(); toast(`Cargados ${plural(l.length, "AMFE", "AMFE")}.`, 3000);
+    };
+    fr.readAsText(f);
+  });
   // Copia de seguridad de la app Indicadores (para «Traer de Indicadores» desde otro dispositivo)
   $("#input-ind").addEventListener("change", e => {
     const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;

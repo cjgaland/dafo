@@ -1553,3 +1553,6 @@ body.modo-reunion .vt-t { font-size: 16px; } body.modo-reunion .vt-t .vot-in { w
 body.modo-reunion .tgn-t, body.modo-reunion .tgn-res { font-size: 16px; }
 body.modo-reunion .cuad-t { font-size: 24px; }
 body.modo-reunion .wiz-steps, body.modo-reunion .herr-card { display: none; }
+/* ---------- Entrega 5 · Ponte a prueba ---------- */
+:root[data-tema="oscuro"] .fec-q .seg button.fec-ok, :root[data-tema="oscuro"] .fec-q .seg button.fec-mal { color: #0d1b2a; }
+.fec-q .fx-cod { min-width: 26px; height: 21px; font-size: 11.5px; margin-right: 4px; }

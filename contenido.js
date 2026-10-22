@@ -384,8 +384,165 @@
     creado: "2026-10-22T08:00:00.000Z", modificado: "2026-10-22T08:00:00.000Z"
   };
 
+  // ---------- Ponte a prueba ----------
+  // Bloques del test → tema de «Aprende» que conviene repasar
+  const TEMAS_TEST = { 1: { nom: "El DAFO y su preparación", aprende: 2 }, 2: { nom: "Mirar dentro y fuera", aprende: 3 }, 3: { nom: "Priorizar y cruzar", aprende: 5 }, 4: { nom: "Estrategias y plan", aprende: 7 } };
+  const TEST = [
+    { t: 1, q: "¿Qué dos cuadrantes del DAFO forman el análisis interno?", o: ["Fortalezas y debilidades.", "Oportunidades y amenazas.", "Fortalezas y oportunidades.", "Debilidades y amenazas."], ok: 0, e: "Lo interno es lo que depende de la unidad: sus fortalezas y sus debilidades. Las oportunidades y las amenazas vienen del entorno." },
+    { t: 1, q: "¿Qué significa CAME?", o: ["Corregir, afrontar, mantener y explotar.", "Comparar, analizar, medir y evaluar.", "Controlar, auditar, mejorar y estandarizar.", "Cambiar, actuar, motivar y ejecutar."], ok: 0, e: "Son las cuatro estrategias que salen del DAFO: corregir las debilidades, afrontar las amenazas, mantener las fortalezas y explotar las oportunidades." },
+    { t: 1, q: "¿Cuál es la mejor razón para hacer el DAFO de una UGC?", o: ["Porque lo pide la dirección todos los años.", "Preparar el acuerdo de gestión del año siguiente.", "Sustituir el análisis de riesgos de los procesos.", "Evaluar el trabajo de cada profesional."], ok: 1, e: "Un DAFO necesita una finalidad: de ella dependen las preguntas, los datos y las decisiones. «Porque toca» no lleva a ninguna decisión, y no sirve ni para analizar riesgos de procesos ni para evaluar a personas." },
+    { t: 1, q: "¿Por qué conviene apuntar las fuentes de datos del DAFO?", o: ["Para que el informe sea más largo.", "Porque un DAFO sin datos es una lista de opiniones y no permite saber si algo mejora.", "Porque lo exige la normativa de protección de datos.", "Para no tener que reunir al equipo."], ok: 1, e: "Cada factor debería responder a «¿cómo lo sabéis?». Con el dato, el año que viene se podrá ver si ha cambiado." },
+    { t: 1, q: "¿Cuál de estos objetos es demasiado amplio para un DAFO útil?", o: ["La UGC de un centro de salud.", "El servicio de Farmacia del hospital.", "Todo el Área sanitaria, con sus hospitales y centros.", "Un proyecto de consulta de heridas crónicas."], ok: 2, e: "Un DAFO de «todo el Área» sale tan general que no ayuda a decidir. Mejor uno por unidad o servicio, y después juntar lo común." },
+    { t: 2, q: "En el DAFO de una UGC, «la Consejería no cubre las sustituciones de verano» es…", o: ["Una debilidad.", "Una amenaza.", "Una fortaleza.", "Una oportunidad."], ok: 1, e: "No depende de la unidad: viene de fuera y la perjudica. Lo que sí depende de ella (por ejemplo, no tener plan de contingencia para el verano) sería una debilidad." },
+    { t: 2, q: "«Solo el 30 % del personal se ha formado en seguridad del paciente en tres años» es…", o: ["Una amenaza.", "Una debilidad.", "Una oportunidad.", "No es un factor."], ok: 1, e: "Depende de la unidad y la limita: es una debilidad, y además está bien escrita, con su dato." },
+    { t: 2, q: "¿Cuál de estos está bien escrito como factor?", o: ["«Comunicación».", "«Hay que mejorar la formación».", "«Demora media de 6 días para cita con medicina de familia».", "«Falta de recursos»."], ok: 2, e: "Un buen factor es concreto y tiene un dato. «Comunicación» y «falta de recursos» son vagos, y «hay que mejorar…» es una solución, no un factor." },
+    { t: 2, q: "En el método PESTEL, «llega una herramienta corporativa de teleconsulta» es un factor…", o: ["Político.", "Económico.", "Tecnológico.", "Legal."], ok: 2, e: "Es un cambio tecnológico del entorno; para la unidad, una oportunidad." },
+    { t: 2, q: "En oportunidades y amenazas, el peso de un factor es…", o: ["La importancia sola.", "La importancia por la probabilidad.", "La importancia más la probabilidad.", "La probabilidad sola."], ok: 1, e: "Peso = importancia × probabilidad, de 1 a 25. Así pesa más lo importante que además es probable en el horizonte del análisis." },
+    { t: 3, q: "Una amenaza tiene importancia 5 y probabilidad 1; otra, importancia 3 y probabilidad 5. ¿Cuál pesa más?", o: ["La primera (peso 5).", "La segunda (peso 15).", "Pesan igual.", "No se puede saber."], ok: 1, e: "5 × 1 = 5 y 3 × 5 = 15. Algo muy grave pero casi imposible pesa menos que algo menos grave que ya está ocurriendo." },
+    { t: 3, q: "Si todos los factores tienen importancia 4 o 5…", o: ["El análisis es excelente.", "La escala no sirve para elegir: hay que comparar los factores entre sí.", "Hay que quedarse con todos.", "Hay que subir los demás a 5."], ok: 1, e: "Si todo es importante, nada lo es. Comparad unos factores con otros para que se vea qué pesa más." },
+    { t: 3, q: "¿Por qué conviene que cada persona vote en silencio y por separado?", o: ["Para ir más rápido.", "Para que no pese más la voz más alta o la persona con más cargo.", "Porque lo exige la acreditación.", "Para no tener que hablar después."], ok: 1, e: "Es la idea de la técnica de grupo nominal: primero cada uno decide solo; después se comparan los votos y se habla de los que están muy separados." },
+    { t: 3, q: "En la matriz cruzada, el bloque DO responde a la pregunta…", o: ["¿Esta fortaleza ayuda a aprovechar esta oportunidad?", "¿Esta debilidad nos impide aprovechar esta oportunidad?", "¿Esta debilidad nos hace más vulnerables a esta amenaza?", "¿Esta fortaleza nos defiende de esta amenaza?"], ok: 1, e: "DO cruza debilidades con oportunidades: lo que no os deja aprovechar el entorno. De ahí salen las estrategias de corregir." },
+    { t: 3, q: "Si el bloque con más media en la matriz cruzada es DA, la orientación es…", o: ["Ofensiva.", "Defensiva.", "De reorientación.", "De supervivencia."], ok: 3, e: "DA: las debilidades os dejan expuestos ante las amenazas. Lo primero es reducir esa vulnerabilidad (afrontar)." },
+    { t: 4, q: "Una estrategia que usa una fortaleza para aprovechar una oportunidad es de tipo…", o: ["Corregir.", "Afrontar.", "Mantener.", "Explotar."], ok: 3, e: "FO → explotar: estrategias ofensivas que aprovechan el entorno con lo que hacéis bien." },
+    { t: 4, q: "¿Qué estrategia conviene elegir primero?", o: ["Poco impacto y difícil de hacer.", "Mucho impacto y viable.", "Mucho impacto, pero imposible sin recursos que no hay.", "La más barata aunque no cambie nada."], ok: 1, e: "Las de «Hazla ya»: mucho impacto y viables. Las de mucho impacto pero difíciles se planifican; las de poco impacto y difíciles, se reconsideran." },
+    { t: 4, q: "¿Cuál de estos es un objetivo SMART?", o: ["Mejorar la conciliación de la medicación.", "Que el 80 % de las altas tengan la medicación conciliada en 7 días antes de diciembre de 2027.", "Conciliar más y mejor.", "Concienciar al personal sobre la conciliación."], ok: 1, e: "Es específico, medible (80 %), alcanzable, relevante y tiene plazo (diciembre de 2027). Los demás no dicen cuánto ni cuándo." },
+    { t: 4, q: "¿Cuál de estas acciones es una medida fuerte?", o: ["Una sesión de formación al equipo.", "Un cartel recordatorio en la consulta.", "Una alerta automática en la historia clínica cuando llega un alta sin conciliar.", "Un correo a todos los profesionales."], ok: 2, e: "Las medidas fuertes cambian el sistema y no dependen de la memoria. Formar, recordar o avisar ayudan, pero solas son débiles." },
+    { t: 4, q: "Una debilidad que es un proceso concreto con riesgo para el paciente (por ejemplo, la conciliación al alta) pide además…", o: ["Nada más: basta con el DAFO.", "Un AMFE de ese proceso.", "Una encuesta de clima laboral.", "Cambiar el horizonte del análisis."], ok: 1, e: "El DAFO mira la unidad en grande. Para saber qué puede fallar en cada paso de un proceso con riesgo, hace falta un AMFE (y para medir una práctica, una auditoría)." }
+  ];
+  // Ejercicios prácticos
+  const EJERCICIOS = {
+    // ¿Fortaleza, debilidad, oportunidad o amenaza? (en el DAFO de una UGC de Atención Primaria)
+    clasifica: [
+      ["Tres médicos de familia se jubilan en los próximos dos años", "A", "Viene de fuera (plantillas y jubilaciones) y os perjudica."],
+      ["El 91 % de los pacientes está satisfecho con la atención", "F", "Depende de vosotros y está a favor."],
+      ["La Agencia de Calidad ofrece apoyo para preparar la acreditación", "O", "Viene de fuera y os puede ayudar si lo aprovecháis."],
+      ["No hay reunión de equipo desde hace un año", "D", "Depende de vosotros y juega en contra."],
+      ["La población de la zona envejece y aumenta la cronicidad", "A", "Es un cambio del entorno que aumentará la demanda."],
+      ["Llega una herramienta corporativa de teleconsulta", "O", "Un cambio tecnológico del entorno que podéis aprovechar."],
+      ["Los protocolos de la unidad llevan cinco años sin revisar", "D", "Revisarlos depende de vosotros: es interno."],
+      ["Enfermería gestora de casos con 140 crónicos complejos en seguimiento", "F", "Una capacidad de la unidad, con su dato."],
+      ["Restricciones presupuestarias para nuevas contrataciones", "A", "No lo decide la unidad: viene de fuera y la limita."],
+      ["Una asociación de pacientes quiere colaborar con la unidad", "O", "Un aliado del entorno: oportunidad."]
+    ].map(([texto, tipo, por]) => ({ texto, tipo, por })),
+    // ¿Sirve como factor?
+    sirve: [
+      ["Comunicación", "vago"], ["Hay que formar al personal en seguridad del paciente", "solucion"], ["Solo el 30 % del personal se ha formado en seguridad del paciente en tres años", "bien"],
+      ["Falta de recursos", "vago"], ["Implantar una agenda de acto único", "solucion"], ["Demora media de 6 días para cita con medicina de familia", "bien"],
+      ["Buen ambiente", "vago"], ["Mejorar la higiene de manos", "solucion"], ["Cumplimiento de la higiene de manos del 55 % en la observación directa", "bien"]
+    ].map(([texto, k]) => ({ texto, k })),
+    // ¿Qué estrategia CAME sale de este cruce?
+    came: [
+      ["F", "Enfermería gestora de casos consolidada", "O", "Llega la teleconsulta corporativa", "E"],
+      ["D", "Conciliación de la medicación al alta en el 45 % de los casos", "O", "El hospital ofrece una enfermera de enlace para el alta", "C"],
+      ["D", "Demora de 6 días para la cita", "A", "Envejecimiento y más pacientes crónicos", "A"],
+      ["F", "Unidad docente con residentes", "A", "Jubilaciones en plazas difíciles de cubrir", "M"],
+      ["F", "Buena cultura de notificación de incidentes", "O", "La estrategia de seguridad financia proyectos", "E"],
+      ["D", "Poca formación en seguridad del paciente", "A", "Caídas del sistema informático que paralizan la consulta", "A"]
+    ].map(([tf, fila, tc, col, came]) => ({ tf, fila, tc, col, came }))
+  };
+
+  // ---------- Minicasos (inventados, para practicar un paso concreto) ----------
+  const crucesDe = (id, filas, cols, valores) => { const r = {}; filas.forEach((f, i) => cols.forEach((c, j) => { r[`${id}-${f}|${id}-${c}`] = String(valores[i][j]); })); return r; };
+  const MINICASOS = [
+    { id: "ej-mini-urg", titulo: "Urgencias: ¿dentro o fuera?", objeto: "Servicio de Urgencias hospitalarias", tipoObjeto: "servicio", finalidad: "estrategico", horizonte: "3 años", paso: 3,
+      foco: "Frases mezcladas: separa lo interno de lo externo y corrige las que son soluciones o están vagas (pasos 3 y 4).",
+      factores: [
+        ["F", 1, "Triaje de enfermería con el sistema Manchester implantado desde hace 10 años", "procesos", "Tiempo medio hasta el triaje: 9 minutos", 4],
+        ["F", 2, "Equipo de enfermería con formación en soporte vital avanzado", "personas", "90 % con el curso al día", 4],
+        ["D", 1, "La Consejería no cubre las sustituciones de verano", "personas", "", 4],
+        ["D", 2, "Esperas de más de 4 horas para ingresar en planta", "resultados", "Mediana de 5 horas en invierno", 5],
+        ["D", 3, "Hay que mejorar la comunicación con las plantas", "organizacion", "", 3],
+        ["O", 1, "Nuestro equipo de enfermería está muy implicado", "sanitario", "", 3, 5],
+        ["O", 2, "Plan del hospital para abrir una unidad de corta estancia", "sanitario", "Aprobado para 2027", 4, 4],
+        ["A", 1, "Aumento de la población mayor de 80 años", "social", "+12 % en cinco años", 4, 5],
+        ["A", 2, "Comunicación", "social", "", 3, 3]] },
+    { id: "ej-mini-far", titulo: "Farmacia: ¿qué amenaza pesa más?", objeto: "Servicio de Farmacia hospitalaria", tipoObjeto: "servicio", finalidad: "acsa", horizonte: "El ciclo de la acreditación", paso: 4,
+      foco: "Amenazas con distinta importancia y probabilidad: el peso decide cuál va primero (paso 4).",
+      factores: [
+        ["F", 1, "Validación farmacéutica del 100 % de las prescripciones de hospitalización", "procesos", "Informe anual 2026", 5],
+        ["F", 2, "Dispensación automatizada en seis plantas", "recursos", "Armarios automatizados desde 2024", 4],
+        ["D", 1, "Conciliación de la medicación al ingreso solo en el 40 % de los pacientes", "seguridad", "Auditoría 2026", 5],
+        ["D", 2, "Un único farmacéutico de guardia localizada para todo el hospital", "personas", "Cuadrante de guardias", 3],
+        ["O", 1, "Nueva prescripción electrónica integrada con atención primaria", "tecnologico", "Despliegue previsto en 2027", 4, 4],
+        ["O", 2, "Programa de la Agencia para acreditar servicios de farmacia", "sanitario", "Convocatoria abierta", 4, 5],
+        ["A", 1, "Desabastecimiento de medicamentos", "economico", "32 alertas de desabastecimiento en 2026", 3, 5],
+        ["A", 2, "Ciberataque que paralice el sistema de prescripción", "tecnologico", "Ningún incidente en el hospital hasta ahora", 5, 1],
+        ["A", 3, "Nueva normativa de preparación de medicamentos estériles", "legal", "En tramitación", 4, 3]] },
+    { id: "ej-mini-her", titulo: "Proyecto: consulta de heridas crónicas", objeto: "Consulta de enfermería de heridas crónicas (proyecto)", tipoObjeto: "proyecto", finalidad: "proyecto", horizonte: "Hasta su puesta en marcha y su primer año", paso: 1,
+      foco: "El DAFO de un proyecto nuevo: ¿es viable y qué riesgos tiene? Mira también sus estrategias (pasos 1 y 7).",
+      factores: [
+        ["F", 1, "Dos enfermeras con máster en heridas crónicas", "personas", "Títulos de 2023 y 2025", 5],
+        ["F", 2, "Registro de úlceras en la historia digital desde 2025", "sistemas", "312 pacientes registrados", 4],
+        ["D", 1, "No hay sala libre con lavabo para las curas complejas", "recursos", "Revisión de espacios de 2026", 4],
+        ["D", 2, "Sin circuito de derivación desde los centros de salud", "procesos", "Sin protocolo escrito", 4],
+        ["O", 1, "Plan de cronicidad del Distrito que prioriza las úlceras", "politico", "Plan 2026–2028", 4, 4],
+        ["O", 2, "Asociación de pacientes con diabetes interesada en colaborar", "comunidad", "Reunión en 2026", 3, 4],
+        ["A", 1, "Restricciones para nuevas contrataciones", "economico", "Instrucciones para 2027", 4, 4],
+        ["A", 2, "Material de curas avanzado sujeto a un concurso centralizado", "economico", "Concurso en curso", 3, 4]],
+      estrategias: [
+        ["C", "Habilitar una sala de curas compartida y un circuito de derivación desde los centros de salud", ["D1", "D2", "O1"], 3, 2],
+        ["E", "Abrir la consulta con las enfermeras expertas y el registro digital, apoyándose en el plan de cronicidad", ["F1", "F2", "O1"], 3, 3]] },
+    { id: "ej-mini-cal", titulo: "Unidad de Calidad: la matriz cruzada", objeto: "Unidad de Calidad y Seguridad del Paciente del Área", tipoObjeto: "unidad", finalidad: "estrategico", horizonte: "3 años", paso: 6, n: 3,
+      foco: "Una matriz cruzada completa de 3 × 3 por bloque: ¿qué orientación sale y qué factores son llave? (paso 6).",
+      factores: [
+        ["F", 1, "Equipo con formación avanzada en seguridad del paciente", "personas", "Tres técnicos con máster", 5],
+        ["F", 2, "Sistema de notificación muy usado en el Área", "seguridad", "1.200 notificaciones en 2026", 4],
+        ["F", 3, "Apps propias para auditorías, AMFE e indicadores", "sistemas", "En uso desde 2026", 4],
+        ["D", 1, "Poco tiempo para acompañar a las unidades", "recursos", "Un técnico por cada 15 unidades", 5],
+        ["D", 2, "Las devoluciones de las notificaciones llegan tarde", "procesos", "Media de 60 días", 4],
+        ["D", 3, "Sin cuadro de mando común de indicadores de seguridad", "sistemas", "Cada unidad usa el suyo", 3],
+        ["O", 1, "Nueva estrategia de seguridad del paciente con financiación", "politico", "Convocatoria de 2027", 5, 4],
+        ["O", 2, "Interés de las UGC por acreditarse", "sanitario", "Ocho UGC en preparación", 4, 5],
+        ["O", 3, "Convenio con la universidad para formación", "conocimiento", "Firmado en 2026", 3, 4],
+        ["A", 1, "Recorte de las horas de liberación de los referentes de seguridad", "economico", "Instrucción de 2027", 4, 4],
+        ["A", 2, "Cansancio de las unidades ante tantas auditorías", "social", "Encuesta de clima de 2026", 3, 4],
+        ["A", 3, "Rotación alta de las direcciones de las UGC", "politico", "Cuatro cambios en 2026", 3, 3]],
+      cruces: [["F1", "F2", "F3", "D1", "D2", "D3"], ["O1", "O2", "O3", "A1", "A2", "A3"], [
+        [3, 3, 2, 1, 1, 0], [2, 2, 0, 0, 1, 0], [3, 3, 1, 2, 2, 1],
+        [2, 3, 1, 3, 1, 1], [1, 1, 0, 0, 2, 0], [2, 2, 0, 0, 1, 1]]] },
+    { id: "ej-mini-qui", titulo: "Bloque quirúrgico: estrategias que no cuadran", objeto: "Bloque quirúrgico", tipoObjeto: "servicio", finalidad: "acuerdo", horizonte: "1 año", paso: 7,
+      foco: "Tres estrategias de «mantener» que dejan sin respuesta la debilidad y la amenaza que más pesan (paso 7).",
+      factores: [
+        ["F", 1, "Lista de verificación quirúrgica en el 98 % de las intervenciones", "seguridad", "Auditoría de 2026", 4],
+        ["F", 2, "Equipo de enfermería de quirófano estable", "personas", "Rotación del 5 % al año", 3],
+        ["D", 1, "El 18 % de las intervenciones programadas se suspenden el mismo día", "resultados", "Cuadro de mando de 2026", 5],
+        ["D", 2, "Instrumental que llega incompleto a la sala", "procesos", "40 notificaciones en 2026", 4],
+        ["O", 1, "Nuevo sistema de trazabilidad del instrumental", "tecnologico", "Compra aprobada", 4, 4],
+        ["O", 2, "Programa del hospital de cirugía mayor ambulatoria", "sanitario", "Plan de 2027", 4, 4],
+        ["A", 1, "Lista de espera quirúrgica creciente", "social", "+15 % en 2026", 5, 5],
+        ["A", 2, "Escasez de anestesiólogos", "economico", "Dos plazas vacantes", 4, 4]],
+      estrategias: [
+        ["M", "Mantener la lista de verificación con auditorías periódicas", ["F1"], 3, 3],
+        ["M", "Cuidar la estabilidad del equipo de enfermería de quirófano", ["F2", "A2"], 2, 3],
+        ["M", "Reconocer en público el buen uso de la lista de verificación", ["F1"], 2, 3]] },
+    { id: "ej-mini-onc", titulo: "Hospital de día: del objetivo vago al SMART", objeto: "Hospital de día oncohematológico", tipoObjeto: "servicio", finalidad: "acuerdo", horizonte: "1 año", paso: 8,
+      foco: "Un objetivo vago y una acción sin responsable, sin fecha y sin indicador: conviértelos en un plan medible (paso 8).",
+      factores: [
+        ["F", 1, "Enfermería especializada en oncología con 10 años de experiencia media", "personas", "Plantilla de 2026", 4],
+        ["D", 1, "Espera media de 2 h 30 min entre la llegada y el inicio del tratamiento", "resultados", "Registro de tiempos de 2026", 5],
+        ["O", 1, "Preparación centralizada de citostáticos en Farmacia con un robot nuevo", "tecnologico", "Instalación en 2027", 4, 5],
+        ["A", 1, "Aumento del 10 % anual de pacientes en tratamiento", "social", "Memoria 2024–2026", 5, 5]],
+      estrategias: [
+        ["C", "Preparar el día anterior los citostáticos de los pacientes con analítica previa", ["D1", "O1"], 3, 3, { texto: "Mejorar la espera", meta: "", fecha: "" },
+          [{ que: "Formar al personal en la nueva organización", quien: "", fin: "" }]],
+        ["A", "Abrir una segunda franja de tratamiento por la tarde ante el aumento de pacientes", ["A1", "F1"], 3, 2, { texto: "Atender al 100 % de los pacientes nuevos en su fecha sin alargar la espera, antes de junio de 2027", meta: "100 %", fecha: "2027-06-30" },
+          [{ que: "Agenda de tarde con dos puestos de tratamiento", quien: "Supervisión de enfermería del hospital de día", fin: "2027-03-31", indicador: { nombre: "% de pacientes nuevos que empiezan en su fecha", formula: "Pacientes que empiezan en la fecha prevista / pacientes nuevos × 100", estandar: "100 %", fuente: "Agenda del hospital de día" } }]]] }
+  ];
+  function miniDafo(m) {
+    const id = m.id, fid = c => `${id}-${c}`;
+    const est = (m.estrategias || []).map(([tipo, texto, facs, impacto, viabilidad, objetivo, acciones], i) => ({
+      id: `${id}-e${i + 1}`, tipo, num: i + 1, texto, factores: facs.map(fid), impacto: String(impacto), viabilidad: String(viabilidad), elegida: "", motivo: "", origen: "",
+      objetivo: objetivo || { texto: "", meta: "", fecha: "" },
+      acciones: (acciones || []).map((x, j) => Object.assign({ id: `${id}-a${i + 1}-${j + 1}`, que: "", quien: "", inicio: "", fin: "", recursos: "", como: "", indicador: { nombre: "", formula: "", estandar: "", fuente: "" }, estado: "pendiente", nota: "", seguimiento: [] }, x)) }));
+    return { id, titulo: m.titulo, objeto: m.objeto, tipoObjeto: m.tipoObjeto, finalidad: m.finalidad, horizonte: m.horizonte, mision: "", vision: "", incluye: "", excluye: "", responsable: "", fecha: "",
+      fuentes: [], factores: m.factores.map(([tipo, num, texto, area, evidencia, imp, prob]) => ({ id: fid(tipo + num), tipo, num, texto, area, evidencia, fuenteId: "", aporta: "equipo", importancia: String(imp), probabilidad: prob ? String(prob) : "" })),
+      prioridad: { n: m.n || 5 }, cruces: m.cruces ? crucesDe(id, ...m.cruces) : {}, estrategias: est,
+      notas: "Minicaso inventado para practicar. " + m.foco, creado: "2026-10-22T12:00:00.000Z", modificado: "2026-10-22T12:00:00.000Z" };
+  }
+
   const EJEMPLOS = {
-    dafos: [DAFO_UGC, DAFO_UGC_00],
+    dafos: [DAFO_UGC, DAFO_UGC_00, ...MINICASOS.map(miniDafo)],
+    minicasos: MINICASOS.map(m => ({ t: m.titulo, s: m.foco, href: `#/dafo/${m.id}/${m.paso}` })),
     fichas: [
       { t: "1 · Qué analizamos", s: "Objeto, finalidad (acuerdo de gestión), horizonte, misión y visión", href: "#/dafo/ej-dafo-ugc/1" },
       { t: "2 · Equipo y fuentes", s: "8 perfiles, 3 sesiones y 8 fuentes de datos", href: "#/dafo/ej-dafo-ugc/2" },
@@ -400,7 +557,7 @@
     ]
   };
 
-  const API = { TEMAS, GLOSARIO, EJEMPLOS };
+  const API = { TEMAS, GLOSARIO, EJEMPLOS, TEST, TEMAS_TEST, EJERCICIOS };
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   else raiz.Contenido = API;
 })(typeof window !== "undefined" ? window : this);

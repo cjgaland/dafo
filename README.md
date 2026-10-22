@@ -13,7 +13,8 @@ Ocho pasos: qué se analiza y para qué; fuentes de información; mirar hacia de
 - Prioridad por cuadrante, matriz cruzada con orientación estratégica, estrategias CAME elegidas por impacto y viabilidad, y plan de acción con indicadores y seguimiento.
 - Informe DAFO · CAME y resumen para la Dirección en Word y PDF, lámina DAFO y Excel.
 - Paquete de intercambio para las otras apps del ecosistema (factores, estrategias y candidatos a AMFE, Mapa de Riesgos o auditoría).
-- **Aprende** (siete temas), **glosario** y un **ejemplo completo** (una UGC de Atención Primaria inventada que prepara su acuerdo de gestión).
+- **Traer de AMFE**: los AMFE de la app hermana como evidencia de una debilidad o una fortaleza.
+- **Aprende** (siete temas), **Ponte a prueba** (20 preguntas y tres ejercicios), **glosario**, un **ejemplo completo** (una UGC de Atención Primaria inventada que prepara su acuerdo de gestión, con su edición anterior) y **seis minicasos**.
 
 Los datos se guardan solo en el dispositivo; para trabajar en equipo se comparte la copia de seguridad.
 

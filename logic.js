@@ -176,7 +176,7 @@
       responsable: "", fecha: "", fuentes: [], equipo: [], sesiones: [], ideas: [], bloques: [], tgn: { votos: [] }, factores: [], prioridad: { n: 5 }, cruces: {}, estrategias: [], edicion: "00", anteriorId: "", conclusiones: "", proxRevision: "", control: nuevoControl(), notas: "", creado: fecha, modificado: fecha };
   }
   function nuevaFuente(id) { return { id, tipo: "", nombre: "", fecha: "", nota: "" }; }
-  function nuevoFactor(id, tipo = "F", n = 0) { return { id, tipo, num: n, texto: "", area: "", evidencia: "", fuenteId: "", aporta: "", importancia: "", probabilidad: "", manual: "", motivo: "", candidato: nuevoCandidato(), votos: [], bloqueAcsa: "" }; }
+  function nuevoFactor(id, tipo = "F", n = 0) { return { id, tipo, num: n, texto: "", area: "", evidencia: "", fuenteId: "", aporta: "", importancia: "", probabilidad: "", manual: "", motivo: "", candidato: nuevoCandidato(), votos: [], bloqueAcsa: "", origen: "" }; }
   const nuevoCandidato = () => ({ destino: "", proceso: "", motivo: "" });
   const nuevoIndicador = () => ({ nombre: "", formula: "", estandar: "", fuente: "" });
   const nuevoObjetivo = () => ({ texto: "", meta: "", fecha: "" });
@@ -723,6 +723,41 @@
     return B;
   }
 
+  // ---------- Traer de AMFE (el AMFE de un proceso como evidencia de un factor) ----------
+  // Lee el paquete «amfe-fallos» v1 que publica AMFE en localStorage["amfe-intercambio"] (o su copia .json, clave «intercambio»).
+  // Devuelve null si no es un paquete válido; si lo es, una lista de AMFE con un factor propuesto para cada uno.
+  function leerAmfe(o) {
+    if (o && typeof o === "object" && o.intercambio) o = o.intercambio;
+    if (!o || typeof o !== "object" || o.formato !== "amfe-fallos" || o.version !== 1 || !Array.isArray(o.amfes)) return null;
+    const t = (v, n = 300) => (typeof v === "string" || typeof v === "number") ? String(v).slice(0, n) : "";
+    const n = v => Number.isFinite(v) ? v : null;
+    return o.amfes.slice(0, 100).filter(a => a && typeof a === "object" && Array.isArray(a.fallos)).map(a => {
+      const F = a.fallos.filter(f => f && typeof f === "object"), PR = F.filter(f => f.prioritario === true);
+      const iprs = F.map(f => n(f.ipr)).filter(v => v), max = iprs.length ? Math.max(...iprs) : null;
+      const sinAccion = PR.filter(f => !Array.isArray(f.acciones) || !f.acciones.length).length;
+      const conResidual = PR.filter(f => f.residual && n(f.residual.ipr));
+      const antes = conResidual.reduce((s, f) => s + (n(f.ipr) || 0), 0), despues = conResidual.reduce((s, f) => s + n(f.residual.ipr), 0);
+      const proceso = t(a.proceso) || t(a.titulo) || "sin nombre", titulo = t(a.titulo) || proceso;
+      const evidencia = `AMFE «${titulo}»${t(a.fecha, 40) ? " (" + t(a.fecha, 40) + ")" : ""}: ${plural(F.length, "fallo analizado", "fallos analizados")}, ${PR.length} prioritarios${max ? `, IPR máximo ${max}` : ""}${conResidual.length && antes ? `; el IPR de ${plural(conResidual.length, "prioritario reevaluado", "prioritarios reevaluados")} bajaría de ${antes} a ${despues} (−${Math.round((1 - despues / antes) * 100)} %)` : ""}.`;
+      // Fortaleza si todos los prioritarios tienen acciones y su riesgo residual baja; si no, debilidad
+      const resuelto = PR.length > 0 && !sinAccion && conResidual.length === PR.length && despues < antes;
+      const factor = resuelto
+        ? { tipo: "F", texto: `AMFE del proceso «${proceso}» hecho, con acciones de mejora en ${PR.length === 1 ? "su fallo prioritario" : `sus ${PR.length} fallos prioritarios`}`, area: "seguridad", importancia: "3", evidencia }
+        : { tipo: "D", texto: `El proceso «${proceso}» tiene ${plural(PR.length, "fallo prioritario", "fallos prioritarios")} en su AMFE${sinAccion ? `, ${sinAccion} sin acción de mejora` : PR.length && conResidual.length < PR.length ? ", sin reevaluar el riesgo tras las acciones" : ""}`, area: "seguridad",
+            importancia: String(max >= 300 ? 5 : max >= 200 ? 4 : 3), evidencia };
+      return { id: t(a.id, 60), titulo, proceso, unidad: t(a.unidad), fecha: t(a.fecha, 40), fallos: F.length, prioritarios: PR.length, max, sinAccion, factor };
+    });
+  }
+  // Añade al DAFO el factor propuesto de un AMFE, con su fuente; no lo repite si ya se trajo
+  function factorDeAmfe(d, x, genId) {
+    const origen = "amfe:" + x.id;
+    if (d.factores.some(f => f.origen === origen)) return null;
+    let fu = d.fuentes.find(y => y.tipo === "amfe" && normal(y.nombre) === normal("AMFE «" + x.titulo + "»"));
+    if (!fu) { fu = Object.assign(nuevaFuente(genId()), { tipo: "amfe", nombre: "AMFE «" + x.titulo + "»", fecha: x.fecha, nota: `${x.fallos} fallos, ${x.prioritarios} prioritarios` }); d.fuentes.push(fu); }
+    const f = Object.assign(nuevoFactor(genId(), x.factor.tipo, siguienteNum(d, x.factor.tipo)), { texto: x.factor.texto, area: x.factor.area, evidencia: x.factor.evidencia, importancia: x.factor.importancia, fuenteId: fu.id, aporta: "datos", origen });
+    d.factores.push(f); return f;
+  }
+
   // ---------- Paso 7 · Estrategias CAME ----------
   // Cada estrategia: código E1, E2… (E de «estrategia»; su tipo CAME va aparte, con su nombre, para no confundirla con A1 = amenaza)
   const CAME = {
@@ -801,7 +836,7 @@
     });
     if (conTexto.length && !EL.length) A.push({ nivel: "warn", texto: "Ninguna estrategia está elegida. Puntúa impacto y viabilidad, o elige a mano las que vais a llevar al plan." });
     if (EL.length > 8) A.push({ nivel: "nota", texto: `Hay ${EL.length} estrategias elegidas. Un plan con tantas no se cumple: quedaos con 6 u 8 como mucho.` });
-    if (EL.length >= 3 && new Set(EL.map(e => e.tipo)).size === 1) A.push({ nivel: "nota", texto: `Todas las estrategias elegidas son de «${CAME[EL[0].tipo].nom.toLowerCase()}». ¿No hay nada que ${EL[0].tipo === "E" ? "corregir o mantener" : "explotar o mantener"}?` });
+    if (EL.length >= 3 && new Set(EL.map(e => e.tipo)).size === 1) A.push({ nivel: "nota", texto: `Todas las estrategias elegidas son de «${CAME[EL[0].tipo].nom.toLowerCase()}». ¿No hay nada que ${(o => o.slice(0, -1).join(", ") + " o " + o[o.length - 1])(TIPOS_CAME.filter(k => k !== EL[0].tipo).map(k => CAME[k].nom.toLowerCase()))}?` });
     // Lo que más pesa tiene que tener alguna estrategia
     ["D", "A"].forEach(t => {
       const top = delTipo(d, t).filter(f => lleno(f.texto) && peso(f))[0];
@@ -1283,7 +1318,7 @@
   const ESQ = {
     fuente: { id: "id", tipo: { en: Object.keys(FUENTES_TIPO) }, nombre: [300], fecha: [40], nota: [1000] },
     factor: { id: "id", tipo: { en: TIPOS }, num: "ent", texto: [500], area: { en: [...Object.keys(AREAS), ...Object.keys(AMBITOS)] }, evidencia: [1000], fuenteId: "ref",
-      aporta: { en: Object.keys(APORTA) }, importancia: [2], probabilidad: [2], manual: { en: ["si", "no"] }, motivo: [500], candidato: { obj: "candidato" }, votos: { de: "voto", max: 60 }, bloqueAcsa: { en: Object.keys(BLOQUES_ACSA) } },
+      aporta: { en: Object.keys(APORTA) }, importancia: [2], probabilidad: [2], manual: { en: ["si", "no"] }, motivo: [500], candidato: { obj: "candidato" }, votos: { de: "voto", max: 60 }, bloqueAcsa: { en: Object.keys(BLOQUES_ACSA) }, origen: [120] },
     candidato: { destino: { en: ["amfe", "mapa", "auditoria"] }, proceso: [300], motivo: [800] },
     indicador: { nombre: [300], formula: [500], estandar: [100], fuente: [300] },
     objetivo: { texto: [1000], meta: [200], fecha: [20] },
@@ -1394,7 +1429,7 @@
     CAME, TIPOS_CAME, CAME_DE_BLOQUE, IMPACTO, VIABILIDAD, ZONAS_EST, zonaEstrategia, esElegida, codigoEst, siguienteNumEst, ordenarEstrategias, elegidas, factoresDe, estrategiasPropuestas, avisosEstrategias,
     DESTINOS, sugerirDestino, candidatos, ESTADOS, FUERZAS, fuerzaMedida, vencida, leerEstandar, semaforo, ultimaMedida, smartAuto, accionesDe, avisosPlan, notaCalidad,
     conclusionesSugeridas, introduccionSugerida, nuevaPersona, nuevoControl, renovarIds, nuevaEstrategia, nuevaAccion, nuevaMedida, nuevoCandidato,
-    documentoInforme, documentoResumen, documentoLamina,
+    documentoInforme, documentoResumen, documentoLamina, leerAmfe, factorDeAmfe,
     ROLES, ESTAMENTOS, ESTAMENTO_NOM, estamentoDe, PERFILES_SUG, SESIONES_TIPO, nuevoMiembro, nuevaSesion, etiquetaMiembro, avisosEquipo,
     PREGUNTAS_IDEAS, nuevaIdea, nuevoBloque, ideasParecidas, voto321, ponerVoto321, ranking, ideaAFactor, bloqueAFactor, avisosIdeas,
     mediaVotos, discrepancia, ponerVoto, usarMedia, avisosVotos, bloqueAcsaDe, porBloquesAcsa,
