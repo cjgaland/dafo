@@ -14,8 +14,17 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.03";
+  const APP_VERSION = "2026.04";
   const NOVEDADES = [
+    { version: "2026.04", fecha: "Octubre 2026", titulo: "Trabajo en equipo", cambios: [
+      "Paso 2: el equipo (perfil, cargo y papel) y las sesiones de trabajo, con asistentes y resultados, y avisos si el equipo es de un solo estamento o solo de dirección.",
+      "Lluvia de ideas cuadrante a cuadrante, con preguntas guía, agrupación en bloques, aviso de ideas parecidas y técnica de grupo nominal (3, 2 y 1 puntos). Ideas y bloques pasan a factores con un toque.",
+      "Votación de la importancia y la probabilidad por cada miembro del equipo, con la media propuesta y aviso cuando los votos están muy separados.",
+      "Modo reunión: letra grande y pantalla limpia para proyectar en las sesiones.",
+      "Hoja de trabajo en Word y PDF para las reuniones en papel: lluvia de ideas, votación y matriz cruzada.",
+      "Ediciones anuales: crea la edición del año siguiente y compárala con la anterior (factores que se mantienen, aparecen o desaparecen, y cómo acabaron las estrategias).",
+      "Vista por bloques ACSA del análisis interno, para preparar la acreditación.",
+      "El ejemplo de la UGC trae su equipo, sus sesiones, su lluvia de ideas, la votación y la edición anterior de 2026."] },
     { version: "2026.03", fecha: "Octubre 2026", titulo: "Estrategias CAME, plan de acción y documentos", cambios: [
       "Paso 7 · Estrategias CAME: la app las propone a partir de los cruces fuertes (o de los factores prioritarios), y cada una se puntúa en impacto y viabilidad. Se eligen las de «Hazla ya» y «Planifícala», con la posibilidad de cambiarlo a mano con motivo.",
       "Avisos de coherencia: la debilidad o la amenaza que más pesa sin respuesta, todas las estrategias del mismo tipo, estrategias que no se apoyan en ningún factor, demasiadas elegidas…",
@@ -41,7 +50,7 @@
       "Pegar los factores desde Excel, Calc o Word.",
       "Matriz DAFO imprimible y en PDF, ejemplo completo de una UGC de Atención Primaria, Aprende (7 temas), glosario y copia de seguridad."] }
   ];
-  const ENTREGA = 3;   // pasos ya construidos (ver L.PASOS[].entrega)
+  const ENTREGA = 4;   // pasos ya construidos (ver L.PASOS[].entrega)
 
   // ---------- Utilidades ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -92,7 +101,7 @@
   const buscaDafo = id => datos.dafos.find(x => x.id === id);
   // Un DAFO recién creado no se guarda hasta que se escribe algo
   const borradores = new Map();
-  const esVacio = d => !d.factores.length && !d.fuentes.length && !d.estrategias.length && !["titulo", "objeto", "tipoObjeto", "finalidad", "horizonte", "mision", "vision", "incluye", "excluye", "responsable", "fecha", "conclusiones"].some(k => lleno(d[k]));
+  const esVacio = d => !d.factores.length && !d.fuentes.length && !d.estrategias.length && !d.equipo.length && !d.sesiones.length && !d.ideas.length && !["titulo", "objeto", "tipoObjeto", "finalidad", "horizonte", "mision", "vision", "incluye", "excluye", "responsable", "fecha", "conclusiones"].some(k => lleno(d[k]));
 
   // ---------- Textos de ayuda reutilizables ----------
   const box = (tipo, tag, html) => `<div class="box box--${tipo}"><span class="box-tag">${tag}</span>${html}</div>`;
@@ -179,6 +188,7 @@
     const avisoCopia = n && (diasCopia === null || diasCopia > 30)
       ? `<div class="warn">⚠ ${diasCopia === null ? "Aún no has hecho ninguna copia de seguridad." : `Tu última copia de seguridad es de hace ${diasCopia} días.`} Tus datos solo están en este dispositivo: guarda una copia.</div>` : "";
     const ult = d.dafos.slice().sort((x, y) => String(y.modificado).localeCompare(String(x.modificado)))[0];
+    const revisar = d.dafos.filter(x => L.revisionProxima(x, hoyIso()) && !d.dafos.some(y => y.anteriorId === x.id));
     view.innerHTML = `
       <section class="hero">
         <h1 class="hero-t"><span>DAFO · CAME</span></h1>
@@ -188,6 +198,7 @@
           <a class="btn btn--grande" href="#/dafo">Mis DAFO${n ? ` <span class="contador">${n}</span>` : ""}</a>
         </div>
       </section>
+      ${revisar.map(x => { const r = L.revisionProxima(x, hoyIso()); return `<div class="warn">⚠ ${r.vencida ? "Ya toca" : `En ${plural(r.dias, "día", "días")} toca`} revisar «${esc(L.corto(nombreDafo(x) || "DAFO sin nombre", 60))}». <a href="#/dafo/${x.id}/8">Crear la edición nueva</a></div>`; }).join("")}
       <div class="siguiente">
         <span class="siguiente-tag">Tu siguiente paso</span>
         <p>${esc(sig.texto)}</p>
@@ -259,6 +270,7 @@
   function renderDafo(d, n) {
     actual = d; pasoActual = n; nAyuda = 0;
     if (document.body.classList.contains("ver-informe")) { if (DOCS[docActual]) renderDoc(d, docActual); else renderInforme(d); return; }
+    if (HERRAMIENTAS[n]) { renderHerramienta(d, n); return; }
     const p = L.PASOS[n - 1], disp = pasosDisp();
     const prev = disp.filter(x => x.n < n).pop(), next = disp.find(x => x.n > n);
     const cuerpo = !disponible(p) ? pasoProximo(d, p) : RENDER[n](d);
@@ -337,13 +349,13 @@
       ${idea("<b>Datos antes que opiniones.</b> Cada factor del DAFO debería poder responder a «¿cómo lo sabéis?». Apuntad aquí las fuentes y, en los pasos 3 y 4, cada factor podrá citar la suya.")}
       ${facil(`<p>Sirven los resultados del <b>acuerdo de gestión</b> anterior, el <b>informe de acreditación</b>, los <b>indicadores</b>, la <b>encuesta de satisfacción</b> y las <b>reclamaciones</b> (la voz de los pacientes), la <b>encuesta de cultura de seguridad</b> y las <b>notificaciones de incidentes</b>, las <b>auditorías</b> y los <b>AMFE</b> hechos, la <b>memoria</b> de actividad y los <b>planes</b> del sistema sanitario.</p>
         ${practica("Si no hay datos de algo importante, apuntadlo igual como factor y anotad «sin datos»: ya es un hallazgo (y puede ser una debilidad de vuestro sistema de información).")}`)}
-      <h2 class="sec-t">Fuentes <span class="contador" data-zona="nfu">${d.fuentes.length}</span></h2>
+      <h2 class="sec-t">Fuentes de información <span class="contador" data-zona="nfu">${d.fuentes.length}</span></h2>
       <div class="card no-print"><p class="field-sub">Añade con un toque las fuentes habituales${fin ? ` (primero, las que suelen servir para «${esc(fin.nom)}»)` : ""} y después ajústalas:</p>
         <div class="quick">${tipos.map(k => `<button type="button" class="chip${d.fuentes.some(x => x.tipo === k) ? " active" : sug.includes(k) ? " chip--accent" : ""}" data-act="fu-sug" data-t="${k}">+ ${esc(L.FUENTES_TIPO[k].nom)}</button>`).join("")}</div></div>
       <div class="sub-lista">${d.fuentes.map((x, i) => fuenteCard(d, x, i)).join("")}</div>
       <div class="toolbar no-print"><button class="btn${d.fuentes.length ? "" : " btn--primary"}" data-act="fu-add">+ Añadir otra fuente</button></div>
       <div data-zona="avisos">${avisosGenerales(d, 2)}</div>
-      <div class="placeholder-box no-print"><p><b>El equipo y las sesiones de trabajo</b> (quién participa y cuándo os reunís), con lluvia de ideas y votación, llegarán a este paso en una próxima versión.</p></div>`;
+      ${equipoHtml(d)}`;
   }
 
   // ---------- Pasos 3 y 4 · Los cuatro cuadrantes ----------
@@ -378,6 +390,7 @@
           ${selector(L.esInterno(f.tipo) ? "Área" : "Ámbito del entorno", bx(f, "area"), f.area, [["", "— Elige —"], ...Object.entries(areas).map(([k, v]) => [k, v.nom])])}
           ${selector("Quién lo aporta", bx(f, "aporta"), f.aporta, [["", "— Elige —"], ...Object.entries(L.APORTA)], { opt: true })}
         </div>
+        ${L.esInterno(f.tipo) ? selector("Bloque del manual ACSA", bx(f, "bloqueAcsa"), f.bloqueAcsa, [["", `— Según el área${L.AREA_A_BLOQUE[f.area] ? ": " + L.BLOQUES_ACSA[L.AREA_A_BLOQUE[f.area]] : ""} —`], ...Object.entries(L.BLOQUES_ACSA)], { opt: true }) : ""}
         ${campo(f, "evidencia", "El dato que lo respalda", { bind: bx(f, "evidencia"), area: true, ph: "p. ej. 62 % con HbA1c < 8 % (Distrito: 54 %)", help: "Una cifra, un resultado, lo que dice una encuesta… Si no hay datos, escribe «sin datos»: también es un hallazgo." })}
         ${selector("Fuente", bx(f, "fuenteId"), f.fuenteId, [["", d.fuentes.length ? "— Sin fuente —" : "— Añade fuentes en el paso 2 —"], ...d.fuentes.map(x => [x.id, L.corto(L.nombreFuente(x) || "Fuente sin nombre", 70)])])}
       </details>
@@ -411,6 +424,7 @@
       <div class="toolbar"><button class="btn btn--primary" data-act="pegar-ok" disabled>Añadir los factores</button><button class="btn" data-act="pegar-cerrar">Cancelar</button></div>
     </div>`;
   }
+  const vistaInt = () => leer(KEY_VISTA_INT) || "areas";
   function pasoCuadrantes(d, n) {
     const interno = n === 3, [t1, t2] = interno ? ["F", "D"] : ["O", "A"];
     const ayuda = interno
@@ -430,10 +444,11 @@
           ${trampa("Una oportunidad que nadie va a aprovechar es solo un deseo; y «nuestro equipo está poco formado» no es una amenaza aunque preocupe: depende de vosotros.")}`)}`;
     return `${ayuda}
       ${guiaHtml(n)}
-      <div class="toolbar no-print"><button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>${d.factores.length ? `<button class="btn" data-act="informe">Ver matriz DAFO / PDF</button><button class="btn" data-act="excel">⬇ Excel</button>` : ""}</div>
+      <div class="toolbar no-print"><a class="btn" href="#/dafo/${d.id}/ideas">💡 Lluvia de ideas</a><button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>${d.factores.length ? `<button class="btn" data-act="informe">Ver matriz DAFO / PDF</button><button class="btn" data-act="excel">⬇ Excel</button>` : ""}</div>
       ${pegarAbierto ? pegarHtml(n) : ""}
       <div data-zona="avisos">${avisosGenerales(d, n)}</div>
-      <div class="cuad-2">${columna(d, t1)}${columna(d, t2)}</div>
+      ${interno ? `<div class="seg seg--mini vista-int no-print" role="group" aria-label="Forma de ver el análisis interno"><button type="button" class="${vistaInt() === "areas" ? "active" : ""}" data-act="vista-int" data-v="areas">Por cuadrantes</button><button type="button" class="${vistaInt() === "acsa" ? "active" : ""}" data-act="vista-int" data-v="acsa">Por bloques ACSA</button></div>` : ""}
+      ${interno && vistaInt() === "acsa" ? acsaHtml(d) : `<div class="cuad-2">${columna(d, t1)}${columna(d, t2)}</div>`}
       ${n === 4 ? `<h2 class="sec-t">Matriz DAFO</h2><p class="page-lead">Los cuatro cuadrantes, cada uno ordenado por su peso. En el paso 5 os quedaréis con los más importantes y en el 6 los cruzaréis.</p>
         <div data-zona="matriz">${matrizHtml(d)}</div>` : ""}`;
   }
@@ -449,7 +464,7 @@
     const e = m[f.id], btn = (v, t) => `<button type="button" class="pf-btn${(f.manual || "") === v ? " on" : ""}" data-act="fx-manual" data-id="${f.id}" data-v="${v}" aria-pressed="${(f.manual || "") === v}">${t}</button>`;
     return `<div class="pf q-${f.tipo}${e.prio ? " pf--on" : ""}" data-fid="${f.id}">
       <div class="pf-cab">${codBadge(f)}<span class="pf-txt"><b>${esc(f.texto)}</b>${lleno(f.evidencia) ? `<span>${esc(L.corto(f.evidencia, 110))}</span>` : `<span class="falta">Sin dato que lo respalde</span>`}</span>
-        <span class="pf-badges">${pesoBadge(f)}${e.puesto ? `<span class="badge">${e.puesto}.º</span>` : ""}${estadoPrio(e)}</span></div>
+        <span class="pf-badges">${pesoBadge(f)}${e.puesto ? `<span class="badge">${e.puesto}.º</span>` : ""}${f.votos.length ? `<span class="badge${L.discrepancia(f).length ? " sem--no" : ""}" title="Votación del equipo">${plural(f.votos.length, "voto", "votos")}</span>` : ""}${estadoPrio(e)}</span></div>
       <div class="pf-acc no-print">${btn("", "Según el peso")}${btn("si", "Sí, entra")}${btn("no", "No entra")}</div>
       ${f.manual ? campo(f, "motivo", "Motivo de la decisión", { bind: bx(f, "motivo"), area: true, ph: f.manual === "si" ? "p. ej. Aunque pesa poco, es requisito de la acreditación" : "p. ej. Ya se está corrigiendo con un proyecto en marcha", extra: `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="sug-motivo" data-id="${f.id}">✎ Proponer el dato del motivo</button></div>` }) : ""}
       <div data-zav="${f.id}">${avisosFactor(d, 5, f.id)}</div>
@@ -464,6 +479,7 @@
         ${trampa("Si os quedáis con todo, la matriz cruzada se hace eterna y nada destaca. Y si quitáis a mano lo que más pesa, explicad por qué: quien lea el análisis lo preguntará.")}`)}
       <div class="card no-print"><h2 class="sub-h">Cuántos por cuadrante</h2>
         <div class="seg seg--mini" role="group" aria-label="Factores prioritarios por cuadrante">${[3, 4, 5, 6, 7, 8, 10].map(v => `<button type="button" class="${v === N ? "active" : ""}" data-act="prio-n" data-v="${v}">${v}</button>`).join("")}</div>
+        <div class="toolbar"><a class="btn" href="#/dafo/${d.id}/votar">🗳 Votar la importancia en equipo</a>${btnReunion()}</div>
         <p class="field-sub">Entran los ${N} de más peso de cada cuadrante. Con ${N} por cuadrante, la matriz cruzada tendrá hasta ${N * 2 * N * 2} casillas.</p></div>
       <div data-zona="avisos">${avisosGenerales(d, 5)}</div>
       <h2 class="sec-t">Matriz DAFO de los prioritarios</h2>
@@ -535,6 +551,186 @@
       <div data-zona="resultado">${resultadoHtml(d)}</div>`;
   }
   const progCruce = r => `<span class="badge">${r.rellenas} de ${r.total} casillas valoradas</span>${r.orientacion ? `<span class="badge badge--prio">Orientación ${r.orientacion}</span>` : ""}`;
+  // ---------- Paso 2 · Equipo y sesiones ----------
+  const bm = (m, f) => `data-m="${m.id}" data-f="${f}"`;
+  const bse = (x, f) => `data-x="${x.id}" data-f="${f}"`;
+  function miembroCard(m, i) {
+    return `<div class="sub-card sub-card--eq">
+      <div class="sub-cab"><span class="eq-n">${i + 1}</span><b>${lleno(m.perfil) ? esc(m.perfil) : '<span class="vacio">Perfil sin escribir</span>'}</b><span class="badge">${esc(L.ROLES[m.rol].nom)}</span>
+        <span class="sub-acc no-print"><button type="button" class="link-btn link-btn--peligro" data-act="eq-del" data-id="${m.id}">Quitar</button></span></div>
+      <div class="dos-col">
+        ${campo(m, "perfil", "Perfil profesional", { bind: bm(m, "perfil"), ph: "p. ej. Enfermero/a de la unidad" })}
+        ${campo(m, "cargo", "Cargo o puesto", { bind: bm(m, "cargo"), opt: true, ph: "p. ej. Coordinador/a de cuidados" })}
+      </div>
+      <div class="dos-col">
+        ${selector("Papel en el DAFO", bm(m, "rol"), m.rol, Object.keys(L.ROLES).map(k => [k, L.ROLES[k].nom]), { help: Object.keys(L.ROLES).map(k => `<b>${L.ROLES[k].nom}</b>: ${L.ROLES[k].que}`).join("<br>") })}
+        ${campo(m, "nombre", "Nombre", { bind: bm(m, "nombre"), opt: true, ph: "Puedes dejarlo vacío", help: "Opcional. Para votar basta con el perfil." })}
+      </div>
+    </div>`;
+  }
+  function sesionCard(d, x, i) {
+    return `<div class="sub-card sub-card--ses">
+      <div class="sub-cab"><span class="eq-n">${i + 1}</span><b>Sesión ${i + 1}</b>${lleno(x.fecha) ? `<span class="badge">${esc(fmtFecha(x.fecha))}</span>` : ""}
+        <span class="sub-acc no-print"><button type="button" class="link-btn link-btn--peligro" data-act="ses-del" data-id="${x.id}">Quitar</button></span></div>
+      <div class="dos-col">
+        ${campo(x, "fecha", "Fecha", { bind: bse(x, "fecha"), tipo: "date" })}
+        ${campo(x, "duracion", "Duración", { bind: bse(x, "duracion"), opt: true, ph: "p. ej. 2 h" })}
+      </div>
+      ${campo(x, "actividad", "Actividad principal", { bind: bse(x, "actividad"), ph: "p. ej. Lluvia de ideas y matriz DAFO" })}
+      ${d.equipo.length ? `<div class="field"><div class="field-head"><label class="field-label">Asistentes</label></div><div class="quick">${d.equipo.map(m => `<button type="button" class="chip${x.asistentes.includes(m.id) ? " active" : ""}" data-asis="${x.id}" data-v="${m.id}">${esc(L.corto(L.etiquetaMiembro(m), 40))}</button>`).join("")}</div></div>` : ""}
+      ${campo(x, "resultados", "Resultados", { bind: bse(x, "resultados"), area: true, opt: true, ph: "p. ej. 24 factores con su dato" })}
+    </div>`;
+  }
+  function equipoHtml(d) {
+    const ya = new Set([...d.equipo.map(m => L.normal(m.perfil))]);
+    return `<h2 class="sec-t">Equipo <span class="contador" data-zona="neq">${d.equipo.length}</span> <span class="field-opt">(opcional)</span></h2>
+      <p class="page-lead">Quién participa en el análisis. Hace falta para votar en la lluvia de ideas y en la importancia de los factores.</p>
+      <div class="card no-print"><p class="field-sub">Añade con un toque los perfiles habituales y después ajústalos:</p>
+        <div class="quick">${L.PERFILES_SUG.map((p, i) => `<button type="button" class="chip${ya.has(L.normal(p.perfil)) ? " active" : ""}" data-act="eq-sug" data-i="${i}">+ ${esc(p.perfil)}</button>`).join("")}</div></div>
+      <div class="sub-lista">${d.equipo.map(miembroCard).join("")}</div>
+      <div class="toolbar no-print"><button class="btn" data-act="eq-add">+ Añadir otro perfil</button></div>
+      <h2 class="sec-t">Sesiones de trabajo <span class="contador" data-zona="nses">${d.sesiones.length}</span> <span class="field-opt">(opcional)</span></h2>
+      <div class="sub-lista">${d.sesiones.map((x, i) => sesionCard(d, x, i)).join("") || `<p class="placeholder-box">Aún no hay sesiones. Puedes proponer las habituales y ajustarlas.</p>`}</div>
+      <div class="toolbar no-print"><button class="btn" data-act="ses-add">+ Añadir sesión</button>${d.sesiones.length ? "" : `<button class="btn" data-act="ses-tipo">Proponer las 3 sesiones habituales</button>`}</div>
+      <div class="card herr-card no-print"><h3 class="sub-h">Para las sesiones</h3><p class="field-sub">Si empezáis en blanco, haced primero una <b>lluvia de ideas</b> cuadrante a cuadrante y votad en silencio los bloques más importantes. La <b>hoja de trabajo</b> sirve para las reuniones en papel.</p>
+        <div class="toolbar"><a class="btn btn--primary" href="#/dafo/${d.id}/ideas">💡 Lluvia de ideas</a><a class="btn" href="#/dafo/${d.id}/votar">🗳 Votar la importancia</a><button class="btn" data-act="doc-ver" data-doc="hoja">Hoja de trabajo</button>${btnReunion()}</div></div>`;
+  }
+
+  // ---------- Modo reunión: letra grande y pantalla limpia para proyectar ----------
+  const btnReunion = () => `<button class="btn" data-act="reunion">${document.body.classList.contains("modo-reunion") ? "Salir del modo reunión" : "🖥 Modo reunión"}</button>`;
+  function ponerReunion(si) {
+    document.body.classList.toggle("modo-reunion", si);
+    let x = $("#salir-reunion");
+    if (si && !x) { x = document.createElement("button"); x.id = "salir-reunion"; x.className = "btn salir-reunion no-print"; x.textContent = "✕ Salir del modo reunión"; x.addEventListener("click", () => ponerReunion(false)); document.body.appendChild(x); }
+    if (!si && x) x.remove();
+    if (actual) repintar();
+  }
+
+  // ---------- Herramientas de equipo: lluvia de ideas y votación (fuera de la línea de pasos) ----------
+  const HERRAMIENTAS = { ideas: { titulo: "Lluvia de ideas", sub: "Ideas por cuadrante, bloques y técnica de grupo nominal" }, votar: { titulo: "Votar la importancia", sub: "Cada miembro puntúa; la app propone la media" } };
+  let cuadIdeas = "F", cuadVotar = "D";
+  const cuadTabs = (act, actual) => `<div class="quick cuad-tabs no-print" role="group" aria-label="Cuadrante">${L.TIPOS.map(t => `<button type="button" class="chip q-chip q-${t}${t === actual ? " chip--on" : ""}" data-act="${act}" data-v="${t}">${t} · ${Q[t].nom}</button>`).join("")}</div>`;
+  function ideaFila(d, i) {
+    const f = i.factorId ? d.factores.find(x => x.id === i.factorId) : null, B = d.bloques.filter(b => b.cuadrante === i.cuadrante);
+    return `<div class="idea-fila">
+      <input class="txt-in idea-in" data-idea="${i.id}" data-f="texto" value="${esc(i.texto)}" aria-label="Idea" autocomplete="off" />
+      <div class="input-wrap idea-bq"><select class="txt-in" data-idea="${i.id}" data-f="bloqueId" aria-label="Bloque"><option value="">— Sin bloque —</option>${B.map(b => `<option value="${b.id}"${b.id === i.bloqueId ? " selected" : ""}>${esc(L.corto(b.nombre || "Bloque sin nombre", 40))}</option>`).join("")}</select></div>
+      ${f ? `<a class="badge q-b q-${f.tipo} idea-ok" href="#/dafo/${d.id}/${L.esInterno(f.tipo) ? 3 : 4}" title="Ya es el factor ${L.codigo(f)}">✓ ${L.codigo(f)}</a>` : `<button type="button" class="btn btn--sm" data-act="idea-factor" data-id="${i.id}" title="Pasar esta idea a factor">→ Factor</button>`}
+      <button type="button" class="icon-btn" data-act="idea-del" data-id="${i.id}" aria-label="Quitar la idea">✕</button>
+    </div>`;
+  }
+  function rankingHtml(d, t) {
+    const R = L.ranking(d, t);
+    if (!R.length) return `<p class="field-sub">Crea bloques para poder votarlos.</p>`;
+    return `<div class="table-wrap"><table class="mini tabla-riesgos tgn-res"><thead><tr><th>Puesto</th><th>Bloque</th><th>Puntos</th><th>Comentario del grupo</th><th></th></tr></thead><tbody>
+      ${R.map((r, k) => { const pend = d.ideas.filter(i => i.bloqueId === r.b.id && lleno(i.texto) && !(i.factorId && d.factores.some(f => f.id === i.factorId))).length; return `<tr${r.total ? "" : ' class="tgn-cero"'}><td>${r.total ? k + 1 : "–"}</td><td><b>${esc(r.b.nombre || "Sin nombre")}</b><br><span class="field-sub">${plural(r.ideas, "idea", "ideas")}</span></td><td><b>${r.total}</b></td>
+        <td><textarea class="txt-in txt-in--sm" data-bq="${r.b.id}" data-f="comentario" rows="2" placeholder="${r.total ? "Por qué es importante (o el dato que lo respalda)" : "Nadie lo ha votado: ¿por qué?"}">${esc(r.b.comentario)}</textarea></td>
+        <td>${pend ? `<button type="button" class="btn btn--sm no-print" data-act="bloque-factor" data-id="${r.b.id}">Pasar a factor</button>` : `<span class="badge">✓ Pasado</span>`}</td></tr>`; }).join("")}
+    </tbody></table></div>`;
+  }
+  function votacionTgn(d, t) {
+    const M = d.equipo.filter(m => lleno(m.perfil)), B = d.bloques.filter(b => b.cuadrante === t);
+    if (!M.length) return `<p class="placeholder-box">Para votar hace falta el equipo. <a href="#/dafo/${d.id}/2">Añádelo en el paso 2</a>.</p>`;
+    if (B.length < 2) return `<p class="field-sub">Para votar hacen falta al menos dos bloques en ${Q[t].nom.toLowerCase()}.</p>`;
+    return `<div class="table-wrap"><table class="mini tgn-t"><thead><tr><th>Miembro</th><th>3 puntos</th><th>2 puntos</th><th>1 punto</th></tr></thead><tbody>
+      ${M.map(m => `<tr><td>${esc(L.corto(L.etiquetaMiembro(m), 34))}</td>${[3, 2, 1].map(pt => `<td><select class="txt-in tgn-sel" data-v321="${m.id}" data-t="${t}" data-p="${pt}" aria-label="${pt} puntos de ${esc(m.perfil)}"><option value="">—</option>${B.map(b => `<option value="${b.id}"${L.voto321(d, m.id, t, pt) === b.id ? " selected" : ""}>${esc(L.corto(b.nombre || "Sin nombre", 30))}</option>`).join("")}</select></td>`).join("")}</tr>`).join("")}
+    </tbody></table></div>`;
+  }
+  function herrIdeas(d) {
+    const t = cuadIdeas, I = d.ideas.filter(i => i.cuadrante === t), B = d.bloques.filter(b => b.cuadrante === t);
+    return `
+      ${idea("Primero, <b>muchas ideas sin juzgarlas</b>, cuadrante a cuadrante; después se agrupan en bloques y cada persona vota en silencio. Los bloques más votados pasan a factores.")}
+      ${facil(`<p><b>Lluvia de ideas</b>: cada persona dice, para cada cuadrante, lo que se le ocurre. Todo se apunta, sin debatir. Se puede pedir tres ideas por cuadrante a cada uno.</p>
+        <p><b>Agrupar</b>: se juntan las ideas parecidas en bloques (la app avisa de las que se parecen) y se quitan las repetidas.</p>
+        <p><b>Técnica de grupo nominal</b>: en cada cuadrante, cada persona reparte en silencio 3, 2 y 1 puntos entre los bloques. Se suman y se comentan, también los que nadie votó.</p>
+        <p>Los bloques importantes pasan a <b>factores</b> con un toque; después, en los pasos 3 y 4, se completan con su dato y su importancia.</p>
+        ${trampa("Si se debate cada idea al apuntarla, se apagan las de quien habla menos. Primero se apunta todo; luego se ordena y se vota en silencio.")}`)}
+      <div class="toolbar no-print">${btnReunion()}<button class="btn" data-act="doc-ver" data-doc="hoja">Hoja de trabajo</button></div>
+      ${cuadTabs("ideas-cuad", t)}
+      <section class="cuad q-${t}">
+        <h2 class="cuad-t"><span class="cuad-letra">${t}</span>${Q[t].nom} <span class="contador">${I.length}</span></h2>
+        <p class="guia">${L.PREGUNTAS_IDEAS[t].map(q => `<span>${esc(q)}</span>`).join("")}</p>
+        <div class="idea-nueva no-print"><input class="txt-in" id="idea-txt" placeholder="Escribe una idea y pulsa Intro" autocomplete="off" /><button class="btn btn--primary" data-act="idea-add">Añadir</button></div>
+        <div class="ideas-lista">${I.map(i => ideaFila(d, i)).join("") || `<p class="field-sub">Aún no hay ideas en este cuadrante.</p>`}</div>
+        <h3 class="sub-h">Bloques <span class="contador">${B.length}</span></h3>
+        <div class="idea-nueva no-print"><input class="txt-in" id="bloque-txt" placeholder="Nombre del bloque (p. ej. Demora para la cita)" autocomplete="off" /><button class="btn" data-act="bloque-add">Crear bloque</button></div>
+        <div class="bloques-lista">${B.map(b => `<div class="bloque-fila"><input class="txt-in" data-bq="${b.id}" data-f="nombre" value="${esc(b.nombre)}" aria-label="Nombre del bloque" autocomplete="off" /><span class="badge">${plural(d.ideas.filter(i => i.bloqueId === b.id).length, "idea", "ideas")}</span><button type="button" class="icon-btn no-print" data-act="bloque-del" data-id="${b.id}" aria-label="Quitar el bloque">✕</button></div>`).join("")}</div>
+        <h3 class="sub-h">Grupo nominal: 3, 2 y 1 puntos</h3>
+        ${votacionTgn(d, t)}
+        <h3 class="sub-h">Recuento</h3>
+        <div data-zona="ranking">${rankingHtml(d, t)}</div>
+      </section>
+      <div data-zona="avisos">${avisosGenerales(d, "ideas")}</div>
+      <div class="toolbar no-print"><a class="btn btn--primary" href="#/dafo/${d.id}/${L.esInterno(t) ? 3 : 4}">Completar los factores en el paso ${L.esInterno(t) ? 3 : 4} →</a></div>`;
+  }
+  const fmtMedia = v => String(Math.round(v * 10) / 10).replace(".", ",");
+  function celdaMedia(f) {
+    const m = L.mediaVotos(f), dif = L.discrepancia(f);
+    const parte = k => m[k] ? `<span class="${dif.includes(k) ? "vt-disc" : ""}" title="${m[k].n} votos; del ${m[k].media - 0} con rango ${m[k].rango}">${fmtMedia(m[k].exacta)} → <b>${m[k].media}</b></span>` : "—";
+    return L.esInterno(f.tipo) ? parte("importancia") : `${parte("importancia")}<br>${parte("probabilidad")}`;
+  }
+  function herrVotar(d) {
+    const t = cuadVotar, M = d.equipo.filter(m => lleno(m.perfil)), F = L.delTipo(d, t, "num").filter(f => lleno(f.texto)), ext = !L.esInterno(t);
+    const tabla = !M.length ? `<p class="placeholder-box">Para votar hace falta el equipo. <a href="#/dafo/${d.id}/2">Añádelo en el paso 2</a>.</p>`
+      : !F.length ? `<p class="placeholder-box">No hay ${Q[t].nom.toLowerCase()} que votar.</p>`
+      : `<div class="table-wrap"><table class="mini vt-t"><thead><tr><th>Factor</th>${M.map(m => `<th title="${esc(m.perfil)}">${esc(L.corto(L.etiquetaMiembro(m), 14))}</th>`).join("")}<th>Media</th><th>Valor final</th><th></th></tr></thead><tbody>
+        ${F.map(f => `<tr data-vf="${f.id}"><td>${codBadge(f)} ${esc(L.corto(f.texto, 70))}</td>${M.map(m => { const v = f.votos.find(x => x.miembroId === m.id) || {}; return `<td><input class="txt-in vot-in" data-voto="${f.id}" data-mi="${m.id}" data-f="importancia" value="${esc(v.importancia || "")}" inputmode="numeric" maxlength="1" placeholder="I" aria-label="Importancia según ${esc(m.perfil)}" />${ext ? `<input class="txt-in vot-in" data-voto="${f.id}" data-mi="${m.id}" data-f="probabilidad" value="${esc(v.probabilidad || "")}" inputmode="numeric" maxlength="1" placeholder="P" aria-label="Probabilidad según ${esc(m.perfil)}" />` : ""}</td>`; }).join("")}
+          <td class="vt-m" data-zvm="${f.id}">${celdaMedia(f)}</td><td class="vt-m" data-zvf="${f.id}">${esc(f.importancia || "—")}${ext ? ` × ${esc(f.probabilidad || "—")}` : ""}</td><td><button type="button" class="btn btn--sm no-print" data-act="voto-usar" data-id="${f.id}">Usar la media</button></td></tr>`).join("")}
+      </tbody></table></div>`;
+    return `
+      ${idea("Que cada persona puntúe <b>en silencio</b> y después se comparen los votos. Así no pesa más la voz más alta.")}
+      ${facil(`<p>Cada miembro puntúa la <b>importancia</b> de 1 a 5 (I) y, en oportunidades y amenazas, la <b>probabilidad</b> de 1 a 5 (P). La app calcula la <b>media</b> y la redondea.</p>
+        <p>Si entre el voto más alto y el más bajo hay <b>3 puntos o más</b>, sale en rojo: <b>habladlo</b> antes de cerrar el valor. Quizá cada uno entiende el factor de una forma; a veces hay que reescribirlo.</p>
+        <p>El valor final lo decide el equipo: «Usar la media» lo copia al factor, pero se puede cambiar en los pasos 3 y 4.</p>`)}
+      <div class="toolbar no-print">${btnReunion()}<button class="btn" data-act="votos-usar-todos">Usar todas las medias de ${Q[t].nom.toLowerCase()}</button><button class="btn" data-act="doc-ver" data-doc="hoja">Hoja de votación</button></div>
+      ${cuadTabs("votar-cuad", t)}
+      ${tabla}
+      <div data-zona="avisos">${avisosGenerales(d, "votar")}${avisosVotarCuad(d)}</div>
+      <div class="toolbar no-print"><a class="btn btn--primary" href="#/dafo/${d.id}/5">Ir a priorizar →</a></div>`;
+  }
+  // Avisos de los factores del cuadrante que se está votando
+  const avisosVotarCuad = d => L.avisosDe(d, "votar").filter(x => x.factor && (d.factores.find(f => f.id === x.factor) || {}).tipo === cuadVotar).map(avisoHtml).join("");
+  function renderHerramienta(d, k) {
+    const H = HERRAMIENTAS[k];
+    view.innerHTML = `
+      <div class="wiz-top no-print">${volver(modoEjemplo ? "#/ejemplos" : "#/dafo", modoEjemplo ? "Ejemplos" : "Mis DAFO")}${pasosHtml(d, 0)}</div>
+      <div class="wiz-titulo"><span class="wiz-paso">Trabajo en equipo${lleno(nombreDafo(d)) ? " · " + esc(L.corto(nombreDafo(d), 60)) : ""}</span><h1 class="page-title">${H.titulo}</h1><p class="page-lead">${H.sub}</p></div>
+      ${k === "ideas" ? herrIdeas(d) : herrVotar(d)}
+      <div class="wiz-nav no-print"><a class="btn" href="#/dafo/${d.id}/2">← Equipo y fuentes</a><a class="btn" href="#/dafo/${d.id}/${k === "ideas" ? "votar" : "ideas"}">${k === "ideas" ? "Votar la importancia" : "Lluvia de ideas"} →</a></div>`;
+  }
+
+  // ---------- Vista por bloques ACSA (paso 3) ----------
+  const KEY_VISTA_INT = "dafo-vista-interno";
+  function acsaHtml(d) {
+    return `<div class="acsa">${L.porBloquesAcsa(d).map(b => `<section class="acsa-b${!b.F.length && !b.D.length ? " acsa-b--vacio" : ""}"><h3 class="sub-h">${esc(b.nom)} <span class="badge q-b q-F">F ${b.F.length}</span><span class="badge q-b q-D">D ${b.D.length}</span></h3>
+      ${b.F.length || b.D.length ? `<ul class="acsa-l">${[...b.F, ...b.D].map(f => `<li>${codBadge(f)} ${esc(f.texto)} ${pesoBadge(f)}</li>`).join("")}</ul>` : `<p class="field-sub">Ningún factor. Si vais a la acreditación, revisad este bloque del manual.</p>`}</section>`).join("")}</div>
+      <p class="field-sub">Cada factor va al bloque que le corresponde por su área; se puede cambiar en «Área, dato y fuente» de cada fortaleza o debilidad.</p>`;
+  }
+
+  // ---------- Ediciones y revisión anual (paso 8) ----------
+  const anteriorDe = d => d.anteriorId ? (datos.dafos.find(x => x.id === d.anteriorId) || null) : null;
+  function edicionesHtml(d) {
+    const ant = anteriorDe(d), sig = datos.dafos.find(x => x.anteriorId === d.id), rev = L.revisionProxima(d, hoyIso());
+    const cambio = { sube: "↑", baja: "↓", igual: "=", sin: "–" };
+    let h = `<p>Edición <b>${esc(d.edicion || "00")}</b>${lleno(d.proxRevision) ? ` · Próxima revisión: <b>${esc(fmtFecha(d.proxRevision))}</b>${rev ? (rev.vencida ? ` <span class="badge sem--no">Pasada</span>` : ` <span class="badge">En ${plural(rev.dias, "día", "días")}</span>`) : ""}` : ""}</p>
+      <p class="field-sub">Cada año (con el nuevo acuerdo de gestión, o antes si algo cambia), crea una <b>edición nueva</b>: es una copia que actualizaréis y que la app compara con esta, factor a factor y estrategia a estrategia.</p>`;
+    if (sig) h += `<div class="note">ℹ Ya existe la edición ${esc(sig.edicion)}. <a href="#/dafo/${sig.id}/8">Ir a ella</a></div>`;
+    else h += `<div class="toolbar no-print"><button class="btn" data-act="ed-nueva">Crear la edición ${String((parseInt(d.edicion, 10) || 0) + 1).padStart(2, "0")}</button></div>`;
+    if (d.anteriorId && !ant) h += `<p class="field-sub">La edición anterior no está en este dispositivo.</p>`;
+    if (ant) {
+      const C2 = L.compararEdiciones(ant, d), cu = C2.cuenta;
+      const cambian = C2.mantienen.filter(x => x.cambio === "sube" || x.cambio === "baja");
+      h += `<h3 class="sub-h">Comparación con la edición ${esc(ant.edicion || "00")} <a class="field-sub" href="#/dafo/${ant.id}/8">(abrirla)</a></h3>
+        <div class="res-linea"><span class="badge">${cu.mantienen} se mantienen</span><span class="badge">${cu.suben} pesan más</span><span class="badge">${cu.bajan} pesan menos</span><span class="badge sem--ok">${cu.nuevos} nuevos</span><span class="badge">${cu.desaparecen} desaparecen</span>${C2.orientacion.antes || C2.orientacion.ahora ? `<span class="badge">Orientación: ${C2.orientacion.antes || "—"} → ${C2.orientacion.ahora || "—"}</span>` : ""}</div>
+        ${C2.nuevos.length || C2.desaparecen.length || cambian.length ? `<div class="table-wrap"><table class="mini tabla-riesgos"><thead><tr><th>Cód.</th><th>Factor</th><th>Cambio</th></tr></thead><tbody>
+          ${C2.nuevos.map(f => `<tr><td>${codBadge(f)}</td><td>${esc(f.texto)}</td><td><b>Nuevo</b></td></tr>`).join("")}
+          ${C2.desaparecen.map(f => `<tr><td>${codBadge(f)}</td><td>${esc(f.texto)}</td><td>Desaparece</td></tr>`).join("")}
+          ${cambian.map(x => `<tr><td>${codBadge(x.f)}</td><td>${esc(x.f.texto)}</td><td>${cambio[x.cambio]} peso ${x.antes} → ${x.ahora}</td></tr>`).join("")}</tbody></table></div>` : ""}
+        ${C2.estrategias.length ? `<h3 class="sub-h">Cómo acabaron las estrategias de la edición ${esc(ant.edicion || "00")}</h3><ul class="nota-l">${C2.estrategias.map(x => `<li class="${x.estado === "cumplida" ? "ok" : x.estado === "sinlograr" || x.estado === "pendiente" ? "no" : ""}"><span>${x.estado === "cumplida" ? "✓" : x.estado === "sinlograr" || x.estado === "pendiente" ? "✕" : "·"}</span><span><b>${L.codigoEst(x.e)}</b> ${esc(x.e.texto)} · <i>${esc(L.ESTADOS_EST[x.estado])}</i></span></li>`).join("")}</ul>` : ""}`;
+    }
+    return h;
+  }
+
   // ---------- Paso 7 · Estrategias CAME ----------
   const qDeCame = t => L.CAME[t].sobre;                  // color de la estrategia = el del cuadrante sobre el que actúa
   const cameBadge = e => `<span class="badge q-b q-${qDeCame(e.tipo)}">${L.CAME[e.tipo].nom}</span>`;
@@ -710,6 +906,8 @@
       </div>
       <h2 class="sec-t">Control del documento</h2>
       <div class="card">${controlHtml(d)}</div>
+      <h2 class="sec-t">Ediciones y revisión anual</h2>
+      <div class="card">${edicionesHtml(d)}</div>
       <h2 class="sec-t">Nota de calidad</h2>
       <div class="card" data-zona="nota">${notaHtml(d)}</div>
       <h2 class="sec-t">Documentos</h2>
@@ -720,6 +918,8 @@
           <div class="toolbar"><button class="btn btn--primary" data-act="doc-word" data-doc="resumen">⬇ Word</button><button class="btn" data-act="doc-ver" data-doc="resumen">Ver / PDF</button></div></div>
         <div class="card"><h3 class="sub-h">Lámina DAFO</h3><p class="field-sub">La matriz y las estrategias elegidas en una hoja apaisada, para la sesión o el tablón.</p>
           <div class="toolbar"><button class="btn btn--primary" data-act="doc-ver" data-doc="lamina">Ver / imprimir</button><button class="btn" data-act="doc-word" data-doc="lamina">⬇ Word</button></div></div>
+        <div class="card"><h3 class="sub-h">Hoja de trabajo</h3><p class="field-sub">Para las sesiones en papel: lluvia de ideas por cuadrante, hoja de votación de la importancia y plantilla de la matriz cruzada.</p>
+          <div class="toolbar"><button class="btn" data-act="doc-word" data-doc="hoja">⬇ Word</button><button class="btn" data-act="doc-ver" data-doc="hoja">Ver / PDF</button></div></div>
         <div class="card"><h3 class="sub-h">Análisis y Excel</h3><p class="field-sub">Todos los factores, las matrices y el plan para imprimir, y el libro de Excel con todas las hojas.</p>
           <div class="toolbar"><button class="btn" data-act="informe">Ver análisis / PDF</button><button class="btn" data-act="excel">⬇ Excel</button></div></div>
       </div>`;
@@ -744,7 +944,7 @@
       return "";
     }).join("");
   }
-  const DOCS = { informe: L.documentoInforme, resumen: L.documentoResumen, lamina: L.documentoLamina };
+  const DOCS = { informe: (d, f) => L.documentoInforme(d, f, anteriorDe(d)), resumen: L.documentoResumen, lamina: L.documentoLamina, hoja: L.documentoHoja };
   function renderDoc(d, cual) {
     const doc = DOCS[cual](d, new Date().toLocaleDateString("es-ES"));
     view.innerHTML = `<div class="informe-bar informe-only"><button class="btn" data-act="volver">← Volver</button><span class="informe-acc"><button class="btn" data-act="doc-word" data-doc="${cual}">⬇ Word</button><button class="btn btn--primary" data-act="imprimir">Guardar / imprimir</button></span></div>
@@ -755,7 +955,7 @@
     try {
       const doc = DOCS[cual](d, new Date().toLocaleDateString("es-ES"));
       const bytes = window.Docx.construirDocx(Object.assign({ pie: doc.titulo + " · Generado con la app DAFO · CAME" }, doc));
-      const base = ({ resumen: "DAFO Resumen ", lamina: "DAFO Lamina " }[cual] || "DAFO Informe ") + (nombreDafo(d) || "").slice(0, 60);
+      const base = ({ resumen: "DAFO Resumen ", lamina: "DAFO Lamina ", hoja: "DAFO Hoja de trabajo " }[cual] || "DAFO Informe ") + (nombreDafo(d) || "").slice(0, 60);
       compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `${base.replace(/[\\/:*?"<>|%]/g, "").trim()} ${fechaArchivo()}.docx`, "Word descargado. Ábrelo con Word, Pages o LibreOffice y ajústalo a tu gusto.");
     } catch (e) { toast("No se ha podido crear el Word.", 4000); }
   }
@@ -812,11 +1012,13 @@
     const d = actual; if (!d) return;
     const n = pasoActual;
     const Z = {
-      pasos: () => pasosInner(d, n), avisos: () => avisosGenerales(d, n), consejo: () => consejoHtml(d),
+      pasos: () => pasosInner(d, n), avisos: () => avisosGenerales(d, n) + (n === "votar" ? avisosVotarCuad(d) : ""), consejo: () => consejoHtml(d),
       nfu: () => String(d.fuentes.length), matriz: () => matrizHtml(d, n >= 5 || ENTREGA >= 2),
       progcruce: () => progCruce(L.resultadoCruces(d)), resultado: () => resultadoHtml(d),
-      matrizest: () => matrizEstHtml(d), nota: () => notaHtml(d)
+      matrizest: () => matrizEstHtml(d), nota: () => notaHtml(d),
+      neq: () => String(d.equipo.length), nses: () => String(d.sesiones.length), ranking: () => rankingHtml(d, cuadIdeas)
     };
+    if (n === "votar") $$("[data-zvm]").forEach(el => { const f = d.factores.find(x => x.id === el.dataset.zvm); if (f) el.innerHTML = celdaMedia(f); });
     $$("[data-zest]").forEach(el => { el.innerHTML = avisosEst(d, n, el.dataset.zest); });
     $$("[data-zac]").forEach(el => { el.innerHTML = avisosAcc(d, el.dataset.zac); });
     $$("[data-zestado]").forEach(el => { const e = d.estrategias.find(x => x.id === el.dataset.zestado); if (e) el.innerHTML = estadoEst(e); });
@@ -1164,8 +1366,8 @@
       if (!d) noEncontrado("ese DAFO", "#/dafo", "Ir a mis DAFO");
       else {
         if (previo !== d.id) { abiertos.clear(); pegarAbierto = false; previo = d.id; }
-        let n = parseInt(partes[2], 10);
-        if (!(n >= 1 && n <= 8)) { const p = L.pasoPendiente(d, ENTREGA); n = p ? p.n : 1; history.replaceState(null, "", `#/dafo/${d.id}/${n}${informe ? "?informe=1" : ""}`); }
+        let n = HERRAMIENTAS[partes[2]] ? partes[2] : parseInt(partes[2], 10);
+        if (!HERRAMIENTAS[n] && !(n >= 1 && n <= 8)) { const p = L.pasoPendiente(d, ENTREGA); n = p ? p.n : 1; history.replaceState(null, "", `#/dafo/${d.id}/${n}${informe ? "?informe=1" : ""}`); }
         renderDafo(d, n);
       }
       navR = "dafo";
@@ -1213,6 +1415,12 @@
       if (esSel) repintar(); else refrescar(); return;
     }
     if (t.dataset.fx) { const fx = buscaEn(d.factores, t.dataset.fx); if (!fx) return; setPath(fx, f, t.value); tocado(d); refrescar(fx.id); return; }
+    if (t.dataset.m) { const m = buscaEn(d.equipo, t.dataset.m); if (!m) return; m[f] = t.value; tocado(d); if (esSel) repintar(); else refrescar(); return; }
+    if (t.dataset.x) { const x = buscaEn(d.sesiones, t.dataset.x); if (!x) return; x[f] = t.value; tocado(d); refrescar(); return; }
+    if (t.dataset.idea) { const i = buscaEn(d.ideas, t.dataset.idea); if (!i) return; i[f] = t.value; tocado(d); if (esSel) repintar(); else refrescar(); return; }
+    if (t.dataset.bq) { const b = buscaEn(d.bloques, t.dataset.bq); if (!b) return; b[f] = t.value; tocado(d); refrescar(); return; }
+    if (t.dataset.v321) { L.ponerVoto321(d, t.dataset.v321, t.dataset.t, Number(t.dataset.p), t.value); tocado(d); repintar(); return; }
+    if (t.dataset.voto) { const fx = buscaEn(d.factores, t.dataset.voto); if (!fx) return; L.ponerVoto(fx, t.dataset.mi, f, t.value); tocado(d); refrescar(); return; }
     if (t.dataset.es) { const e = buscaEn(d.estrategias, t.dataset.es); if (!e) return; setPath(e, f, t.value); tocado(d); refrescar(); return; }
     if (t.dataset.ac) { const r = buscaAccion(d, t.dataset.ac); if (!r) return; setPath(r.x, f, t.value); tocado(d); refrescar(); return; }
     if (t.dataset.me) { const r = buscaMedida(d, t.dataset.me); if (!r) return; r.m[f] = t.value; tocado(d); refrescar(); return; }
@@ -1235,6 +1443,11 @@
   view.addEventListener("click", e => {
     const t = e.target; let b;
     if ((b = t.closest(".info-btn"))) { const h = $("#help-" + b.dataset.info); if (!h) return; const open = h.hidden; h.hidden = !open; b.setAttribute("aria-expanded", String(open)); return; }
+    if ((b = t.closest("[data-asis]")) && actual) {
+      const x = buscaEn(actual.sesiones, b.dataset.asis); if (!x) return;
+      const i = x.asistentes.indexOf(b.dataset.v); if (i < 0) x.asistentes.push(b.dataset.v); else x.asistentes.splice(i, 1);
+      b.classList.toggle("active", i < 0); tocado(actual); return;
+    }
     if (!(b = t.closest("[data-act]"))) return;
     const d = actual, act = b.dataset.act, id = b.dataset.id;
     // --- Lista ---
@@ -1320,6 +1533,77 @@
       }, { peligro: false });
     }
     else if (act === "excel" && d) exportarExcel(d);
+    // --- Equipo y sesiones ---
+    else if (act === "eq-sug" && d) {
+      const p = L.PERFILES_SUG[Number(b.dataset.i)]; if (!p) return;
+      if (d.equipo.some(m => L.normal(m.perfil) === L.normal(p.perfil))) { toast("Ese perfil ya está en el equipo.", 2500); return; }
+      const unico = p.rol === "coordinacion" || p.rol === "secretaria";
+      d.equipo.push(Object.assign(L.nuevoMiembro(genId()), { perfil: p.perfil, rol: unico && d.equipo.some(x => x.rol === p.rol) ? "miembro" : p.rol })); tocado(d); repintar();
+    }
+    else if (act === "eq-add" && d) {
+      const m = L.nuevoMiembro(genId()); d.equipo.push(m); tocado(d); repintar();
+      const el = $(`[data-m="${m.id}"][data-f="perfil"]`); if (el) { el.focus(); el.scrollIntoView({ block: "center" }); }
+    }
+    else if (act === "eq-del" && d) {
+      const m = buscaEn(d.equipo, id); if (!m) return;
+      const nv = d.factores.reduce((s, f) => s + f.votos.filter(v => v.miembroId === id).length, 0) + d.tgn.votos.filter(v => v.miembroId === id).length;
+      const hacer = () => { d.equipo = d.equipo.filter(x => x.id !== id); d.sesiones.forEach(x => { x.asistentes = x.asistentes.filter(y => y !== id); }); d.factores.forEach(f => { f.votos = f.votos.filter(v => v.miembroId !== id); }); d.tgn.votos = d.tgn.votos.filter(v => v.miembroId !== id); tocado(d); repintar(); };
+      if (lleno(m.perfil) || nv) confirmar(`<p>Se quitará «${esc(L.corto(L.etiquetaMiembro(m), 60))}» del equipo${nv ? `, con sus ${plural(nv, "voto", "votos")}` : ""}.</p>`, "Quitar", hacer); else hacer();
+    }
+    else if (act === "ses-add" && d) { const x = L.nuevaSesion(genId()); d.sesiones.push(x); tocado(d); repintar(); }
+    else if (act === "ses-tipo" && d) {
+      L.SESIONES_TIPO.forEach(z => d.sesiones.push(Object.assign(L.nuevaSesion(genId()), z, { asistentes: d.equipo.map(m => m.id) })));
+      tocado(d); repintar(); toast("Propuestas las sesiones habituales. Pon las fechas y ajústalas.", 3500);
+    }
+    else if (act === "ses-del" && d) {
+      const x = buscaEn(d.sesiones, id); if (!x) return;
+      const hacer = () => { d.sesiones = d.sesiones.filter(y => y.id !== id); tocado(d); repintar(); };
+      if (lleno(x.actividad) || lleno(x.resultados)) confirmar("<p>Se quitará esta sesión.</p>", "Quitar", hacer); else hacer();
+    }
+    // --- Lluvia de ideas y grupo nominal ---
+    else if (act === "ideas-cuad") { cuadIdeas = b.dataset.v; repintar(); }
+    else if (act === "votar-cuad") { cuadVotar = b.dataset.v; repintar(); }
+    else if (act === "idea-add" && d) {
+      const el = $("#idea-txt"); if (!el || !lleno(el.value)) { if (el) el.focus(); return; }
+      d.ideas.push(Object.assign(L.nuevaIdea(genId(), cuadIdeas), { texto: el.value.trim() })); tocado(d); repintar();
+      const n2 = $("#idea-txt"); if (n2) n2.focus();
+    }
+    else if (act === "idea-del" && d) { d.ideas = d.ideas.filter(i => i.id !== id); tocado(d); repintar(); }
+    else if (act === "idea-factor" && d) {
+      const i = buscaEn(d.ideas, id); if (!i || !lleno(i.texto)) return;
+      const f = L.ideaAFactor(d, i, genId); tocado(d); repintar(); if (f) toast(`Ahora es ${L.codigo(f)}. Complétalo en el paso ${L.esInterno(f.tipo) ? 3 : 4} con su dato y su importancia.`, 3500);
+    }
+    else if (act === "bloque-add" && d) {
+      const el = $("#bloque-txt"); if (!el || !lleno(el.value)) { if (el) el.focus(); return; }
+      d.bloques.push(L.nuevoBloque(genId(), cuadIdeas, el.value.trim())); tocado(d); repintar();
+    }
+    else if (act === "bloque-del" && d) {
+      const bq = buscaEn(d.bloques, id); if (!bq) return;
+      const hacer = () => { d.bloques = d.bloques.filter(x => x.id !== id); d.ideas.forEach(i => { if (i.bloqueId === id) i.bloqueId = ""; }); d.tgn.votos = d.tgn.votos.filter(v => v.bloqueId !== id); tocado(d); repintar(); };
+      if (d.tgn.votos.some(v => v.bloqueId === id)) confirmar(`<p>Se quitará el bloque «${esc(bq.nombre)}» con sus votos. Sus ideas no se borran: quedan sin bloque.</p>`, "Quitar", hacer); else hacer();
+    }
+    else if (act === "bloque-factor" && d) {
+      const bq = buscaEn(d.bloques, id); if (!bq) return;
+      const f = L.bloqueAFactor(d, bq, genId); tocado(d); repintar(); if (f) toast(`El bloque es ahora ${L.codigo(f)}. Complétalo en el paso ${L.esInterno(f.tipo) ? 3 : 4}.`, 3500);
+    }
+    else if (act === "reunion") ponerReunion(!document.body.classList.contains("modo-reunion"));
+    // --- Votación de la importancia ---
+    else if (act === "voto-usar" && d) { const f = buscaEn(d.factores, id); if (!f) return; if (L.usarMedia(f)) { tocado(d); repintar(); toast(`${L.codigo(f)}: puesta la media de los votos.`, 2500); } else toast("No hay votos, o el valor ya es la media.", 2500); }
+    else if (act === "votos-usar-todos" && d) {
+      const l = d.factores.filter(f => f.tipo === cuadVotar && f.votos.length);
+      const disc = l.filter(f => L.discrepancia(f).length);
+      const hacer = () => { const n = l.filter(L.usarMedia).length; tocado(d); repintar(); toast(n ? `Puesta la media en ${plural(n, "factor", "factores")}.` : "Nada que cambiar: ya coinciden con la media.", 3000); };
+      if (disc.length) confirmar(`<p>${disc.map(L.codigo).join(", ")} ${disc.length === 1 ? "tiene" : "tienen"} los votos muy separados. ¿Usar la media igualmente?</p>`, "Usar las medias", hacer, { peligro: false }); else hacer();
+    }
+    // --- Vista ACSA y ediciones ---
+    else if (act === "vista-int") { escribir(KEY_VISTA_INT, b.dataset.v); repintar(); }
+    else if (act === "ed-nueva" && d) {
+      confirmar(`<p>Se creará la edición ${String((parseInt(d.edicion, 10) || 0) + 1).padStart(2, "0")}: una copia completa de este DAFO para revisarlo. Esta edición se queda como está, para compararla.</p>`, "Crear la edición", () => {
+        // En los ejemplos, la edición nueva también es de ejemplo (id «ej-…»): no se guarda
+        const c = L.nuevaEdicion(d, modoEjemplo ? () => "ej-ed-" + genId() : genId, hoy()); datos.dafos.push(c); if (!modoEjemplo) guardar(true);
+        location.hash = `#/dafo/${c.id}/1`; toast("Edición nueva creada. Revisa cada paso y actualiza lo que haya cambiado.", 4500);
+      }, { peligro: false });
+    }
     // --- Paso 7 · estrategias ---
     else if (act === "es-proponer" && d) {
       const P = L.estrategiasPropuestas(d); if (!P.length) return;
@@ -1404,6 +1688,11 @@
     else if (act === "importar") $("#input-importar").click();
   });
   view.addEventListener("change", e => { if (e.target.id === "pegar-tipo") pegarVista(); });
+  view.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    if (e.target.id === "idea-txt") { e.preventDefault(); const b = $("[data-act='idea-add']"); if (b) b.click(); }
+    else if (e.target.id === "bloque-txt") { e.preventDefault(); const b = $("[data-act='bloque-add']"); if (b) b.click(); }
+  });
   $("#banner-copiar").addEventListener("click", copiarAMisDatos);
   $("#input-importar").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) importar(f); e.target.value = ""; });
   // Copia de seguridad de la app Indicadores (para «Traer de Indicadores» desde otro dispositivo)
@@ -1444,7 +1733,7 @@
   $("#btn-acerca").addEventListener("click", () => { ma.hidden = false; });
   $("#btn-acerca-cerrar").addEventListener("click", () => { ma.hidden = true; });
   ma.addEventListener("click", e => { if (e.target === ma) ma.hidden = true; });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { ma.hidden = true; $("#modal-confirmar").hidden = true; } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { ma.hidden = true; $("#modal-confirmar").hidden = true; if (document.body.classList.contains("modo-reunion")) ponerReunion(false); } });
 
   // ---------- Versiones y novedades ----------
   const KEY_VERSION = "dafo-version-vista";

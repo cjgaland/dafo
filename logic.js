@@ -173,10 +173,10 @@
   // ---------- Modelo ----------
   function nuevoDafo(id, fecha) {
     return { id, titulo: "", objeto: "", tipoObjeto: "", finalidad: "", horizonte: "", mision: "", vision: "", incluye: "", excluye: "",
-      responsable: "", fecha: "", fuentes: [], factores: [], prioridad: { n: 5 }, cruces: {}, estrategias: [], conclusiones: "", proxRevision: "", control: nuevoControl(), notas: "", creado: fecha, modificado: fecha };
+      responsable: "", fecha: "", fuentes: [], equipo: [], sesiones: [], ideas: [], bloques: [], tgn: { votos: [] }, factores: [], prioridad: { n: 5 }, cruces: {}, estrategias: [], edicion: "00", anteriorId: "", conclusiones: "", proxRevision: "", control: nuevoControl(), notas: "", creado: fecha, modificado: fecha };
   }
   function nuevaFuente(id) { return { id, tipo: "", nombre: "", fecha: "", nota: "" }; }
-  function nuevoFactor(id, tipo = "F", n = 0) { return { id, tipo, num: n, texto: "", area: "", evidencia: "", fuenteId: "", aporta: "", importancia: "", probabilidad: "", manual: "", motivo: "", candidato: nuevoCandidato() }; }
+  function nuevoFactor(id, tipo = "F", n = 0) { return { id, tipo, num: n, texto: "", area: "", evidencia: "", fuenteId: "", aporta: "", importancia: "", probabilidad: "", manual: "", motivo: "", candidato: nuevoCandidato(), votos: [], bloqueAcsa: "" }; }
   const nuevoCandidato = () => ({ destino: "", proceso: "", motivo: "" });
   const nuevoIndicador = () => ({ nombre: "", formula: "", estandar: "", fuente: "" });
   const nuevoObjetivo = () => ({ texto: "", meta: "", fecha: "" });
@@ -300,6 +300,11 @@
     if (conTexto.length >= 3 && sinEv / conTexto.length > 0.5) A.push({ nivel: "nota", texto: `${sinEv} de ${conTexto.length} factores no tienen un dato que los respalde. Sin evidencia, el DAFO es una lista de opiniones: anotad la cifra o la fuente.` });
     // Cantidad y equilibrio
     [t1, t2].forEach(t => { const k = d.factores.filter(f => f.tipo === t && lleno(f.texto)).length; if (k > 10) A.push({ nivel: "nota", texto: `Hay ${k} ${CUADRANTES[t].nom.toLowerCase()}. Está bien para empezar; en el paso 5 os quedaréis con las de más peso (lo habitual, unas 5).` }); });
+    // Preparando la acreditación: bloques del manual sin ningún factor
+    if (n === 3 && d.finalidad === "acsa" && conTexto.length >= 4) {
+      const vacios = porBloquesAcsa(d).filter(b => !b.F.length && !b.D.length);
+      if (vacios.length) A.push({ nivel: "nota", texto: `Ningún factor habla de ${vacios.length === 1 ? "el bloque" : "los bloques"} ${vacios.map(b => "«" + b.nom + "»").join(", ")} del manual de estándares. Si vais a la acreditación, revisadlo${vacios.length === 1 ? "" : "s"} (vista «Por bloques ACSA»).` });
+    }
     const k1 = L1.filter(f => lleno(f.texto)).length, k2 = L2.filter(f => lleno(f.texto)).length;
     if (Math.min(k1, k2) >= 1 && Math.max(k1, k2) >= 4 && Math.max(k1, k2) >= 3 * Math.min(k1, k2)) {
       const mas = k1 > k2 ? t1 : t2, menos = mas === t1 ? t2 : t1;
@@ -311,7 +316,7 @@
   }
   const avisosInterno = d => avisosCuadrantes(d, 3);
   const avisosExterno = d => avisosCuadrantes(d, 4);
-  const avisosDe = (d, n, hoy = new Date().toISOString()) => ({ 1: avisosObjeto, 2: avisosFuentes, 3: avisosInterno, 4: avisosExterno, 5: avisosPriorizar, 6: avisosCruzar, 7: avisosEstrategias, 8: avisosPlan }[n] || (() => []))(d, hoy);
+  const avisosDe = (d, n, hoy = new Date().toISOString()) => ({ 1: avisosObjeto, 2: d => [...avisosFuentes(d), ...conPaso(2, avisosEquipo(d))], ideas: avisosIdeas, votar: avisosVotos, 3: avisosInterno, 4: avisosExterno, 5: avisosPriorizar, 6: avisosCruzar, 7: avisosEstrategias, 8: avisosPlan }[n] || (() => []))(d, hoy);
 
   // ---------- Resumen y progreso ----------
   function resumen(d) {
@@ -414,6 +419,8 @@
       const mas = d.factores.filter(g => g.tipo === f.tipo && lleno(g.texto) && !esPrio(m, g) && !g.manual && peso(g) > peso(f));
       if (mas.length) A.push({ nivel: "nota", factor: f.id, texto: `${codigo(f)} entra a mano con peso ${peso(f)}, y ${mas.map(codigo).join(", ")} ${mas.length === 1 ? "queda" : "quedan"} fuera con más peso. Si es a propósito, que el motivo lo explique.` });
     });
+    const disc = d.factores.filter(f => lleno(f.texto) && discrepancia(f).length);
+    if (disc.length) A.push({ nivel: "nota", texto: `${disc.map(codigo).join(", ")}: los votos del equipo están muy separados. Revisadlos en «Votar» antes de dar la priorización por buena.` });
     const E = empatesCorte(d);
     Object.keys(E).forEach(t => A.push({ nivel: "nota", texto: `Empate en el corte de ${CUADRANTES[t].nom.toLowerCase()}: ${E[t].fuera.map(codigo).join(", ")} ${E[t].fuera.length === 1 ? "tiene" : "tienen"} el mismo peso (${peso(E[t].fuera[0])}) que ${E[t].dentro.map(codigo).join(", ")} y ${E[t].fuera.length === 1 ? "queda" : "quedan"} fuera. Decidid a mano cuál entra.` }));
     return conPaso(5, A);
@@ -493,6 +500,227 @@
     }
     if (r.orientacion && r.empate) A.push({ nivel: "nota", texto: `Los bloques ${r.orientacion} y ${r.empate} pesan casi lo mismo: la unidad está entre una postura ${BLOQUES[r.orientacion].nom.toLowerCase()} y una ${BLOQUES[r.empate].nom.toLowerCase()}. Tenedlo en cuenta al elegir estrategias.` });
     return conPaso(6, A);
+  }
+
+  // ---------- Paso 2 · Equipo y sesiones ----------
+  const ROLES = {
+    coordinacion: { nom: "Coordinación", que: "Dirige las sesiones, modera y vela por que se llegue a acuerdos." },
+    secretaria: { nom: "Secretaría", que: "Apunta lo que se dice y se decide, y prepara los documentos." },
+    miembro: { nom: "Miembro", que: "Aporta su experiencia y su punto de vista." },
+    pacientes: { nom: "Representante de pacientes", que: "Aporta la mirada de quien recibe la atención." },
+    metodologia: { nom: "Asesoría metodológica", que: "Conoce el método DAFO · CAME y ayuda a aplicarlo (por ejemplo, de la Unidad de Calidad)." }
+  };
+  const ESTAMENTOS = [
+    ["medico", "Medicina", /medic|facultativ|pediatr|cirujan|anestesi|internist|radiolog/],
+    ["tcae", "TCAE", /tcae|auxiliar de enfer|tecnico\/a en cuidados|tecnico en cuidados|cuidados aux/],
+    ["enfermeria", "Enfermería", /enfermer|supervisor|matron|gestora de casos|cuidados/],
+    ["administrativo", "Administración", /administrativ|admision|atencion a la ciudadania|atencion ciudadana/],
+    ["social", "Trabajo social", /trabajador|trabajo social/],
+    ["farmacia", "Farmacia", /farmac/],
+    ["tecnico", "Técnicos sanitarios", /tecnico.*(rayos|radiodiagn|laborator|imagen)|fisioterap/],
+    ["calidad", "Calidad y seguridad", /calidad|seguridad del paciente/],
+    ["direccion", "Dirección", /direct|gerent|jef[ea] de/],
+    ["paciente", "Pacientes", /paciente|usuari|familiar|asociacion/]
+  ];
+  const estamentoDe = texto => { const t = sinTildes(texto); const e = ESTAMENTOS.find(([, , re]) => re.test(t)); return e ? e[0] : null; };
+  const ESTAMENTO_NOM = Object.fromEntries(ESTAMENTOS.map(([k, nom]) => [k, nom]));
+  const PERFILES_SUG = [
+    { perfil: "Director/a de la unidad", rol: "coordinacion" },
+    { perfil: "Coordinador/a de cuidados de enfermería", rol: "miembro" },
+    { perfil: "Médico/a de la unidad", rol: "miembro" },
+    { perfil: "Enfermero/a de la unidad", rol: "miembro" },
+    { perfil: "Técnico/a en Cuidados Auxiliares de Enfermería (TCAE)", rol: "miembro" },
+    { perfil: "Administrativo/a o atención a la ciudadanía", rol: "miembro" },
+    { perfil: "Trabajador/a social", rol: "miembro" },
+    { perfil: "Representante de una asociación de pacientes", rol: "pacientes" },
+    { perfil: "Técnico/a de Calidad", rol: "secretaria" }
+  ];
+  const SESIONES_TIPO = [
+    { actividad: "Lluvia de ideas y matriz DAFO (fortalezas, debilidades, oportunidades y amenazas)", duracion: "2 h", resultados: "Factores de los cuatro cuadrantes, con su dato" },
+    { actividad: "Priorización, matriz cruzada y estrategias CAME", duracion: "2 h", resultados: "Factores prioritarios, orientación estratégica y estrategias elegidas" },
+    { actividad: "Plan de acción: objetivos, responsables, plazos e indicadores", duracion: "1 h 30 min", resultados: "Plan de acción aprobado por el equipo" }
+  ];
+  function nuevoMiembro(id) { return { id, perfil: "", cargo: "", rol: "miembro", nombre: "" }; }
+  function nuevaSesion(id) { return { id, fecha: "", actividad: "", duracion: "", asistentes: [], resultados: "" }; }
+  const etiquetaMiembro = m => lleno(m.nombre) ? m.nombre : lleno(m.perfil) ? m.perfil : "Sin perfil";
+  function avisosEquipo(d) {
+    const A = [], E = d.equipo.filter(m => lleno(m.perfil));
+    if (!E.length) return A;   // el equipo es opcional: los avisos solo salen si se empieza a rellenar
+    if (E.length < 4) A.push({ nivel: "nota", texto: `El equipo tiene ${plural(E.length, "perfil", "perfiles")}. Un DAFO sale mejor con 5 a 10 personas de distintos estamentos: cada una ve una parte de la unidad.` });
+    if (!E.some(m => m.rol === "coordinacion")) A.push({ nivel: "nota", texto: "Nadie tiene el papel de coordinación: alguien tiene que dirigir las sesiones y moderar." });
+    if (!E.some(m => m.rol === "secretaria")) A.push({ nivel: "nota", texto: "Nadie tiene el papel de secretaría: alguien tiene que apuntar lo que se decide y preparar los documentos." });
+    const est = [...new Set(E.map(m => estamentoDe(m.perfil + " " + m.cargo)).filter(Boolean))];
+    if (E.length >= 3 && est.length === 1) A.push({ nivel: "warn", texto: `Todo el equipo es del mismo estamento (${ESTAMENTO_NOM[est[0]]}). Faltan otras miradas de la unidad.` });
+    if (E.length >= 3 && E.every(m => /direct|gerent|\bjef[ea]\b/.test(sinTildes(m.perfil + " " + m.cargo)))) A.push({ nivel: "warn", texto: "Solo hay dirección en el equipo. Un DAFO hecho solo desde arriba suele ver muchas fortalezas y pocas debilidades." });
+    if (E.length >= 4 && !E.some(m => m.rol === "pacientes" || estamentoDe(m.perfil + " " + m.cargo) === "paciente")) A.push({ nivel: "nota", texto: "Nadie representa a los pacientes. Si no es posible, que al menos entren como fuente la encuesta de satisfacción y las reclamaciones." });
+    if (!d.sesiones.length) A.push({ nivel: "nota", texto: "Planifica las sesiones de trabajo. Lo habitual son dos de unas dos horas, y una tercera para el plan de acción." });
+    return A;
+  }
+
+  // ---------- Lluvia de ideas y técnica de grupo nominal (por cuadrante) ----------
+  const PREGUNTAS_IDEAS = {
+    F: ["¿Qué hacemos bien?", "¿Qué nos reconocen los pacientes y la dirección?", "¿En qué somos mejores que otras unidades?"],
+    D: ["¿Qué hacemos peor de lo que deberíamos?", "¿De qué se quejan los pacientes?", "¿Qué nos falta o nos frena?"],
+    O: ["¿Qué cambios del entorno nos pueden ayudar?", "¿Qué planes, recursos o alianzas hay a nuestro alcance?", "¿Qué tecnología nueva llega?"],
+    A: ["¿Qué cambios del entorno nos pueden perjudicar?", "¿Qué pasa con el presupuesto, las plantillas, la población?", "¿Qué hacen otros que nos pueda afectar?"]
+  };
+  function nuevaIdea(id, cuadrante = "F") { return { id, cuadrante, texto: "", bloqueId: "", factorId: "" }; }
+  function nuevoBloque(id, cuadrante = "F", nombre = "") { return { id, cuadrante, nombre, comentario: "" }; }
+  // Parejas de ideas parecidas dentro de un mismo cuadrante
+  function ideasParecidas(d) {
+    const r = [];
+    TIPOS.forEach(t => { const l = d.ideas.filter(i => i.cuadrante === t && lleno(i.texto)); for (let i = 0; i < l.length; i++) for (let j = i + 1; j < l.length; j++) if (parecido(l[i].texto, l[j].texto) >= 0.6) r.push([l[i], l[j]]); });
+    return r;
+  }
+  // Grupo nominal: en cada cuadrante, cada miembro reparte 3, 2 y 1 puntos entre los bloques
+  const bloqueDeVoto = (d, v) => d.bloques.find(b => b.id === v.bloqueId);
+  const voto321 = (d, miembroId, t, puntos) => { const v = d.tgn.votos.find(x => x.miembroId === miembroId && String(x.puntos) === String(puntos) && (bloqueDeVoto(d, x) || {}).cuadrante === t); return v ? v.bloqueId : ""; };
+  function ponerVoto321(d, miembroId, t, puntos, bloqueId) {
+    d.tgn.votos = d.tgn.votos.filter(x => !(x.miembroId === miembroId && (bloqueDeVoto(d, x) || {}).cuadrante === t && (String(x.puntos) === String(puntos) || (bloqueId && x.bloqueId === bloqueId))));
+    if (bloqueId) d.tgn.votos.push({ miembroId, bloqueId, puntos: String(puntos) });
+  }
+  function ranking(d, t) {
+    return d.bloques.filter(b => b.cuadrante === t).map((b, i) => { const v = d.tgn.votos.filter(x => x.bloqueId === b.id).map(x => num(x.puntos)).filter(n => n > 0); return { b, i, total: v.reduce((s, n) => s + n, 0), votos: v.length, ideas: d.ideas.filter(x => x.bloqueId === b.id && lleno(x.texto)).length }; })
+      .sort((x, y) => y.total - x.total || y.votos - x.votos || x.i - y.i);
+  }
+  // Una idea o un bloque pasan a factor de su cuadrante (las ideas guardan el factor creado)
+  function ideaAFactor(d, idea, genId) {
+    if (idea.factorId && d.factores.some(f => f.id === idea.factorId)) return null;
+    const f = Object.assign(nuevoFactor(genId(), idea.cuadrante, siguienteNum(d, idea.cuadrante)), { texto: idea.texto.trim(), aporta: "equipo" });
+    d.factores.push(f); idea.factorId = f.id; return f;
+  }
+  function bloqueAFactor(d, b, genId) {
+    const ideas = d.ideas.filter(i => i.bloqueId === b.id && lleno(i.texto) && !(i.factorId && d.factores.some(f => f.id === i.factorId)));
+    if (!ideas.length && !lleno(b.nombre)) return null;
+    const f = Object.assign(nuevoFactor(genId(), b.cuadrante, siguienteNum(d, b.cuadrante)), { texto: (lleno(b.nombre) ? b.nombre : ideas[0].texto).trim(), evidencia: lleno(b.comentario) ? b.comentario : "", aporta: "equipo" });
+    d.factores.push(f); ideas.forEach(i => { i.factorId = f.id; }); return f;
+  }
+  function avisosIdeas(d) {
+    const A = [], I = d.ideas.filter(i => lleno(i.texto)), M = d.equipo.filter(m => lleno(m.perfil));
+    if (!I.length) { A.push({ nivel: "nota", texto: "Apuntad todas las ideas sin juzgarlas, cuadrante a cuadrante. Se puede pedir tres ideas por cuadrante a cada persona." }); return conPaso("ideas", A); }
+    TIPOS.forEach(t => { if (!I.some(i => i.cuadrante === t)) A.push({ nivel: "nota", texto: `Aún no hay ideas de ${CUADRANTES[t].nom.toLowerCase()}.` }); });
+    ideasParecidas(d).slice(0, 5).forEach(([x, y]) => A.push({ nivel: "nota", texto: `«${corto(x.texto, 50)}» y «${corto(y.texto, 50)}» parecen la misma idea. Agrupadlas en el mismo bloque o quitad una.` }));
+    I.forEach(i => revisarRedaccion(i.texto, i.cuadrante).filter(r => r.k === "externo" || r.k === "interno").forEach(r => A.push({ nivel: "nota", texto: `«${corto(i.texto, 50)}»: ${r.texto}` })));
+    const sinBloque = I.filter(i => !d.bloques.some(b => b.id === i.bloqueId)).length;
+    if (I.length >= 6 && sinBloque) A.push({ nivel: "nota", texto: `${sinBloque === 1 ? "Una idea está" : sinBloque + " ideas están"} sin agrupar. Agruparlas en bloques ayuda a ver los temas y a votar.` });
+    if (M.length && d.tgn.votos.length) {
+      const votaron = new Set(d.tgn.votos.map(v => v.miembroId)), faltan = M.filter(m => !votaron.has(m.id));
+      if (faltan.length) A.push({ nivel: "nota", texto: `Falta el voto de ${faltan.length === 1 ? "un miembro" : faltan.length + " miembros"} del equipo (${faltan.map(m => corto(m.perfil, 30)).join(", ")}).` });
+    }
+    const pendientes = I.filter(i => !i.factorId || !d.factores.some(f => f.id === i.factorId)).length;
+    if (pendientes && d.tgn.votos.length) A.push({ nivel: "nota", texto: `${pendientes === 1 ? "Queda una idea" : "Quedan " + pendientes + " ideas"} sin pasar a factores. Pasad las de los bloques más votados; después, en los pasos 3 y 4, se completan con su dato y su importancia.` });
+    return conPaso("ideas", A);
+  }
+
+  // ---------- Votación del equipo de la importancia y la probabilidad ----------
+  // La media se redondea al entero (0,5 hacia arriba); si entre el voto más alto y el más bajo hay 3 puntos o más, hay que hablarlo
+  function mediaVotos(f) {
+    const r = {};
+    ["importancia", "probabilidad"].forEach(k => {
+      const v = f.votos.map(x => entero1a5(x[k])).filter(Boolean);
+      r[k] = v.length ? { n: v.length, media: Math.round(v.reduce((s, x) => s + x, 0) / v.length + 1e-9), exacta: v.reduce((s, x) => s + x, 0) / v.length, rango: Math.max(...v) - Math.min(...v) } : null;
+    });
+    if (esInterno(f.tipo)) r.probabilidad = null;
+    return r;
+  }
+  const discrepancia = f => { const m = mediaVotos(f); return ["importancia", "probabilidad"].filter(k => m[k] && m[k].n >= 2 && m[k].rango >= 3); };
+  function ponerVoto(f, miembroId, k, valor) {
+    let v = f.votos.find(x => x.miembroId === miembroId);
+    if (!v) { v = { miembroId, importancia: "", probabilidad: "" }; f.votos.push(v); }
+    v[k] = String(valor).trim();
+    f.votos = f.votos.filter(x => lleno(x.importancia) || lleno(x.probabilidad));
+  }
+  // Pone en el factor la media redondeada de los votos (devuelve si ha cambiado algo)
+  function usarMedia(f) {
+    const m = mediaVotos(f); let cambia = false;
+    ["importancia", "probabilidad"].forEach(k => { if (m[k] && String(m[k].media) !== String(f[k])) { f[k] = String(m[k].media); cambia = true; } });
+    return cambia;
+  }
+  function avisosVotos(d) {
+    const A = [], M = d.equipo.filter(m => lleno(m.perfil)), F = d.factores.filter(f => lleno(f.texto) && f.votos.length);
+    if (!M.length) { A.push({ nivel: "nota", texto: "Para votar hace falta el equipo: añádelo en el paso 2." }); return conPaso("votar", A); }
+    F.forEach(f => {
+      discrepancia(f).forEach(k => { const m = mediaVotos(f)[k]; A.push({ nivel: "warn", factor: f.id, texto: `${codigo(f)}: en ${k} hay ${m.rango} puntos entre el voto más alto y el más bajo. Habladlo antes de cerrar el valor: quizá cada uno entiende el factor de una forma.` }); });
+      const m = mediaVotos(f), dif = ["importancia", "probabilidad"].filter(k => m[k] && lleno(f[k]) && String(m[k].media) !== String(f[k]));
+      if (dif.length) A.push({ nivel: "nota", factor: f.id, texto: `${codigo(f)}: el valor final (${dif.map(k => k + " " + f[k]).join(", ")}) no coincide con la media de los votos (${dif.map(k => m[k].media).join(", ")}). Puede estar bien si el equipo lo decidió así.` });
+    });
+    const conVoto = new Set(d.factores.flatMap(f => f.votos.map(v => v.miembroId)));
+    if (conVoto.size) { const faltan = M.filter(m => !conVoto.has(m.id)); if (faltan.length) A.push({ nivel: "nota", texto: `${faltan.length === 1 ? "Un miembro no ha" : faltan.length + " miembros no han"} votado todavía (${faltan.map(m => corto(m.perfil, 30)).join(", ")}).` }); }
+    return conPaso("votar", A);
+  }
+
+  // ---------- Vista por bloques ACSA (análisis interno) ----------
+  const bloqueAcsaDe = f => esInterno(f.tipo) ? (BLOQUES_ACSA[f.bloqueAcsa] ? f.bloqueAcsa : AREA_A_BLOQUE[f.area] || "") : "";
+  function porBloquesAcsa(d) {
+    return Object.keys(BLOQUES_ACSA).map(k => {
+      const l = d.factores.filter(f => lleno(f.texto) && esInterno(f.tipo) && bloqueAcsaDe(f) === k);
+      return { k, nom: BLOQUES_ACSA[k], F: ordenar(l.filter(f => f.tipo === "F")), D: ordenar(l.filter(f => f.tipo === "D")) };
+    });
+  }
+
+  // ---------- Ediciones y revisión anual (mejora H) ----------
+  // Una edición nueva copia el DAFO (mismos ids de factores y estrategias, para poder comparar) y la enlaza con la anterior
+  function nuevaEdicion(d, genId, fechaIso) {
+    const c = JSON.parse(JSON.stringify(d)), ed = String((parseInt(d.edicion, 10) || 0) + 1).padStart(2, "0");
+    Object.assign(c, { id: genId(), edicion: ed, anteriorId: d.id, proxRevision: "", conclusiones: "", fecha: "", creado: fechaIso, modificado: fechaIso });
+    c.titulo = lleno(d.titulo) ? d.titulo.replace(/\b(20\d\d)\b/, (m, a) => String(Number(a) + 1)) : "";
+    c.control.historial.push({ edicion: ed, fecha: fechaIso.slice(0, 10), cambio: "Revisión anual del DAFO" });
+    c.ideas = []; c.bloques = []; c.tgn = { votos: [] };   // la lluvia de ideas es de cada edición
+    return c;
+  }
+  // Cómo acabó una estrategia elegida de la edición anterior
+  function estadoEstrategia(e) {
+    const AC = accionesDe(e); if (!AC.length) return "sin";
+    const hechas = AC.filter(x => x.estado === "hecha" || x.estado === "verificada").length;
+    const medidas = AC.filter(x => lleno(x.indicador.nombre) && ultimaMedida(x));
+    const ok = medidas.length && medidas.every(x => semaforo(x.indicador.estandar, ultimaMedida(x).valor) === "ok");
+    if (hechas === AC.length) return ok ? "cumplida" : medidas.length ? "sinlograr" : "hecha";
+    return hechas || AC.some(x => x.estado === "curso") ? "curso" : "pendiente";
+  }
+  const ESTADOS_EST = { cumplida: "Cumplida: acciones hechas e indicadores en el estándar", hecha: "Acciones hechas, sin medir", sinlograr: "Acciones hechas, pero el indicador no llega al estándar", curso: "En curso", pendiente: "Sin empezar", sin: "Sin acciones" };
+  function compararEdiciones(ant, act) {
+    const vivo = l => l.filter(f => lleno(f.texto));
+    const A0 = vivo(ant.factores), A1 = vivo(act.factores), mant = [], nuevos = [], desap = [];
+    A1.forEach(f => { const g = A0.find(x => x.id === f.id); if (!g) nuevos.push(f); else { const p0 = peso(g), p1 = peso(f); mant.push({ f, g, antes: p0, ahora: p1, cambio: !p0 || !p1 ? "sin" : p1 > p0 ? "sube" : p1 < p0 ? "baja" : "igual" }); } });
+    A0.forEach(g => { if (!A1.some(f => f.id === g.id)) desap.push(g); });
+    const est = elegidas(ant).map(e => ({ e, estado: estadoEstrategia(e), sigue: act.estrategias.some(x => x.id === e.id && esElegida(x)) }));
+    const r0 = resultadoCruces(ant), r1 = resultadoCruces(act);
+    return { mantienen: mant, nuevos, desaparecen: desap, estrategias: est, orientacion: { antes: r0.orientacion, ahora: r1.orientacion },
+      cuenta: { mantienen: mant.length, nuevos: nuevos.length, desaparecen: desap.length, suben: mant.filter(x => x.cambio === "sube").length, bajan: mant.filter(x => x.cambio === "baja").length, cumplidas: est.filter(x => x.estado === "cumplida").length } };
+  }
+  // ¿Toca revisar? (fecha de próxima revisión pasada o en los próximos 30 días)
+  function revisionProxima(d, hoyIso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.proxRevision || "")) return null;
+    const dias = Math.round((new Date(d.proxRevision) - new Date(String(hoyIso).slice(0, 10))) / 864e5);
+    return dias <= 30 ? { dias, vencida: dias < 0 } : null;
+  }
+
+  // ---------- Hoja de trabajo para las sesiones presenciales (mejora J) ----------
+  function documentoHoja(d, fecha, vacias = 5) {
+    const B = [], nom = d.objeto || nombreDafo(d) || "Unidad", L_ = n => Array.from({ length: n }, () => " "), r = resultadoCruces(d);
+    B.push({ t: "portada", titulo: "DAFO · Hoja de trabajo", sub: nom, extra: [FINALIDADES[d.finalidad] ? FINALIDADES[d.finalidad].nom : "", "Sesión del ____ / ____ / ________", "Asistentes: ____________________________________________"].filter(lleno) });
+    B.push({ t: "h1", texto: "1. Lluvia de ideas" }, { t: "p", texto: "Sin juzgar ni debatir: una idea por línea. Recordad: si lo podemos cambiar nosotros, es interno (fortaleza o debilidad); si viene de fuera, es externo (oportunidad o amenaza)." });
+    TIPOS.forEach(t => B.push({ t: "h2", texto: `${CUADRANTES[t].nom} · ${PREGUNTAS_IDEAS[t].join(" ")}` }, { t: "tabla", fuente: 9, cab: ["Idea", "Dato que la respalda"], anchos: [62, 38], filas: [...d.ideas.filter(i => i.cuadrante === t && lleno(i.texto)).map(i => [i.texto, " "]), ...L_(vacias).map(() => L_(2))] }));
+    const F = TIPOS.flatMap(t => delTipo(d, t, "num").filter(f => lleno(f.texto)));
+    B.push({ t: "salto" }, { t: "h1", texto: "2. Mi votación de la importancia" }, { t: "p", texto: "Perfil o nombre: ______________________________. Puntúa cada factor de 1 (poco importante) a 5 (clave) sin hablar con los demás; en oportunidades y amenazas, también la probabilidad de 1 a 5. Después se comparan los votos y se calcula la media." },
+      { t: "tabla", fuente: 8, cab: ["Cód.", "Factor", "Importancia (1–5)", "Probabilidad (1–5)"], anchos: [8, 60, 16, 16], filas: [...F.map(f => [{ texto: codigo(f), negrita: true }, f.texto, " ", esInterno(f.tipo) ? { texto: "—", centro: true } : " "]), ...L_(vacias).map(() => L_(4))] });
+    if (r.total) {
+      const cols = [...r.ejes.O, ...r.ejes.A], ancho = Math.min(7, 86 / Math.max(cols.length, 1));
+      B.push({ t: "salto" }, { t: "h1", texto: "3. Matriz cruzada" }, { t: "p", texto: "Valora de 0 (sin relación) a 3 (fuerte). FO: ¿esta fortaleza ayuda a aprovechar esta oportunidad? FA: ¿ayuda a hacer frente a esta amenaza? DO: ¿esta debilidad impide aprovechar esta oportunidad? DA: ¿nos hace más vulnerables a esta amenaza?" },
+        { t: "tabla", fuente: 8, cab: ["", ...cols.map(codigo)], anchos: [100 - ancho * cols.length, ...Array(cols.length).fill(ancho)], filas: [...r.ejes.F, ...r.ejes.D].map(f => [{ texto: codigo(f), negrita: true }, ...cols.map(() => " ")]) },
+        { t: "tabla", fuente: 8, cab: ["Cód.", "Factor"], anchos: [10, 90], filas: [...r.ejes.F, ...r.ejes.D, ...cols].map(f => [{ texto: codigo(f), negrita: true }, f.texto]) });
+    }
+    B.push({ t: "h1", texto: `${r.total ? 4 : 3}. Escalas` }, { t: "tabla", fuente: 8, cab: ["Puntos", "Importancia", "Probabilidad (externos)"], anchos: [10, 45, 45], filas: ESC_IMP.map((x, i) => [{ texto: String(i + 1), centro: true }, x, ESC_PROB[i]]) });
+    return { titulo: "DAFO · Hoja de trabajo · " + nom, bloques: B };
+  }
+  // Comparación con la edición anterior, como bloques para el informe
+  function bloquesComparacion(ant, act) {
+    const C = compararEdiciones(ant, act), B = [];
+    B.push({ t: "p", texto: `Respecto a la edición ${ant.edicion || "00"}: ${C.cuenta.mantienen} factores se mantienen (${C.cuenta.suben} pesan más y ${C.cuenta.bajan} menos), ${C.cuenta.nuevos} son nuevos y ${C.cuenta.desaparecen} desaparecen.${C.orientacion.antes && C.orientacion.ahora ? ` La orientación ${C.orientacion.antes === C.orientacion.ahora ? "se mantiene" : `pasa de ${C.orientacion.antes} a ${C.orientacion.ahora}`}.` : ""}` });
+    const filas = [...C.nuevos.map(f => [{ texto: codigo(f), negrita: true }, f.texto, "Nuevo"]), ...C.desaparecen.map(f => [{ texto: codigo(f), negrita: true }, f.texto, "Desaparece"]), ...C.mantienen.filter(x => x.cambio === "sube" || x.cambio === "baja").map(x => [{ texto: codigo(x.f), negrita: true }, x.f.texto, `Peso ${x.antes} → ${x.ahora}`])];
+    if (filas.length) B.push({ t: "tabla", fuente: 8, cab: ["Cód.", "Factor", "Cambio"], anchos: [8, 70, 22], filas });
+    if (C.estrategias.length) B.push({ t: "tabla", fuente: 8, cab: ["Estrategia de la edición anterior", "Cómo acabó"], anchos: [65, 35], filas: C.estrategias.map(x => [`${codigoEst(x.e)} · ${x.e.texto}`, ESTADOS_EST[x.estado]]) });
+    return B;
   }
 
   // ---------- Paso 7 · Estrategias CAME ----------
@@ -731,6 +959,13 @@
     const mapa = {};
     d.fuentes.forEach(x => { mapa[x.id] = genId(); x.id = mapa[x.id]; });
     d.factores.forEach(f => { const n = genId(); mapa[f.id] = n; f.id = n; f.fuenteId = mapa[f.fuenteId] || ""; });
+    d.equipo.forEach(m => { mapa[m.id] = genId(); m.id = mapa[m.id]; });
+    d.sesiones.forEach(x => { x.id = genId(); x.asistentes = x.asistentes.map(id => mapa[id]).filter(Boolean); });
+    d.bloques.forEach(b => { mapa[b.id] = genId(); b.id = mapa[b.id]; });
+    d.ideas.forEach(i => { i.id = genId(); i.bloqueId = mapa[i.bloqueId] || ""; i.factorId = mapa[i.factorId] || ""; });
+    d.tgn.votos = d.tgn.votos.map(v => ({ miembroId: mapa[v.miembroId], bloqueId: mapa[v.bloqueId], puntos: v.puntos })).filter(v => v.miembroId && v.bloqueId);
+    d.factores.forEach(f => { f.votos = f.votos.map(v => Object.assign(v, { miembroId: mapa[v.miembroId] || "" })).filter(v => v.miembroId); });
+    d.anteriorId = "";
     const cr = {}; Object.keys(d.cruces).forEach(k => { const [a, b] = k.split("|"); if (mapa[a] && mapa[b]) cr[mapa[a] + "|" + mapa[b]] = d.cruces[k]; }); d.cruces = cr;
     d.estrategias.forEach(e => {
       e.id = genId(); e.factores = e.factores.map(id => mapa[id]).filter(Boolean);
@@ -777,7 +1012,7 @@
   };
   const textoAccion = x => [x.que, lleno(x.como) ? "Cómo: " + x.como : "", lleno(x.recursos) ? "Recursos: " + x.recursos : ""].filter(lleno).join("\n");
   const textoIndicador = i => [i.nombre, lleno(i.estandar) ? "Estándar: " + i.estandar : "", lleno(i.formula) ? i.formula : ""].filter(lleno).join("\n");
-  function documentoInforme(d, fecha) {
+  function documentoInforme(d, fecha, ant) {
     const B = [], r = resumen(d), rc = resultadoCruces(d), EL = elegidas(d), fin = FINALIDADES[d.finalidad], nom = d.objeto || nombreDafo(d) || "Sin nombre";
     B.push({ t: "portada", titulo: "Análisis DAFO y estrategias CAME", sub: nom, extra: [fin ? fin.nom : "", d.fecha || fecha, lleno(d.responsable) ? "Responsable: " + d.responsable : ""].filter(lleno) });
     B.push({ t: "h1", texto: "Control del documento" }, ...bloquesControl(d.control), { t: "salto" });
@@ -785,7 +1020,10 @@
     const ficha = [["Qué se analiza", nom], ["Tipo", TIPOS_OBJETO[d.tipoObjeto]], ["Finalidad", fin ? fin.nom : ""], ["Horizonte", d.horizonte], ["Misión", d.mision], ["Visión", d.vision], ["Qué queda dentro", d.incluye], ["Qué queda fuera", d.excluye]].filter(x => lleno(x[1]));
     B.push({ t: "tabla", sinCab: true, anchos: [26, 74], filas: ficha.map(([k, v]) => [{ texto: k, negrita: true, fondo: "F5F0FF" }, v]) });
     B.push({ t: "h1", texto: "2. Metodología" }, { t: "p", texto: `Se revisaron por separado el análisis interno (fortalezas y debilidades, lo que depende de la unidad) y el externo (oportunidades y amenazas, lo que viene del entorno, con el método PESTEL adaptado a sanidad). Cada factor se apoyó en un dato y se puntuó su importancia de 1 a 5; en los externos, también su probabilidad, y su peso es importancia × probabilidad. Se consideraron prioritarios los ${nPrioridad(d)} de más peso de cada cuadrante, con las correcciones del equipo que se indican. Después se cruzaron los factores prioritarios (de 0 a 3) para encontrar las estrategias CAME, que se eligieron por su impacto y su viabilidad.` });
-    if (d.fuentes.length) B.push({ t: "h2", texto: "2.1. Fuentes de información" }, { t: "tabla", fuente: 8, cab: ["Nº", "Fuente", "Fecha", "Qué dice"], anchos: [6, 40, 14, 40], filas: d.fuentes.map((x, i) => [C_(i + 1), { texto: nombreFuente(x), negrita: true }, C_(x.fecha), x.nota]) });
+    const EQ = d.equipo.filter(m => lleno(m.perfil));
+    if (EQ.length) B.push({ t: "h2", texto: "Equipo de trabajo" }, { t: "tabla", fuente: 8, cab: ["Nº", "Perfil", "Cargo", "Papel"], anchos: [6, 40, 34, 20], filas: EQ.map((m, i) => [C_(i + 1), { texto: m.perfil + (lleno(m.nombre) ? "\n" + m.nombre : ""), negrita: true }, m.cargo, ROLES[m.rol] ? ROLES[m.rol].nom : ""]) });
+    if (d.sesiones.length) B.push({ t: "h2", texto: "Sesiones" }, { t: "tabla", fuente: 8, cab: ["Sesión", "Fecha", "Actividad", "Duración", "Resultados"], anchos: [9, 13, 36, 11, 31], filas: d.sesiones.map((x, i) => [C_(i + 1), C_(fmtF(x.fecha)), x.actividad, C_(x.duracion), x.resultados]) });
+    if (d.fuentes.length) B.push({ t: "h2", texto: "Fuentes de información" }, { t: "tabla", fuente: 8, cab: ["Nº", "Fuente", "Fecha", "Qué dice"], anchos: [6, 40, 14, 40], filas: d.fuentes.map((x, i) => [C_(i + 1), { texto: nombreFuente(x), negrita: true }, C_(x.fecha), x.nota]) });
     B.push({ t: "h1", texto: "3. Análisis interno" }, { t: "h2", texto: "3.1. Fortalezas" }, tablaFactores(d, "F"), { t: "h2", texto: "3.2. Debilidades" }, tablaFactores(d, "D"));
     B.push({ t: "h1", texto: "4. Análisis externo" }, { t: "h2", texto: "4.1. Oportunidades" }, tablaFactores(d, "O"), { t: "h2", texto: "4.2. Amenazas" }, tablaFactores(d, "A"));
     B.push({ t: "h1", texto: "5. Matriz DAFO" }, { t: "p", texto: `Factores prioritarios de cada cuadrante (${r.F + r.D + r.O + r.A} factores en total; ${TIPOS.reduce((s, t) => s + prioritarios(d, t).length, 0)} prioritarios).` }, bloqueMatrizDafo(d));
@@ -816,6 +1054,7 @@
       filas: SEG.map(({ e, x, i, u }) => { const s = semaforo(x.indicador.estandar, u.valor); return [C_(`${codigoEst(e)}.${accionesDe(e).indexOf(x) + 1}`), x.indicador.nombre, C_(x.indicador.estandar), C_(u.valor), C_(fmtF(u.fecha)), { texto: s === "ok" ? "Sí" : s === "no" ? "No" : "—", centro: true, negrita: true, fondo: s === "ok" ? "DCFCE7" : s === "no" ? "FFE4E6" : "" }]; }) });
     B.push({ t: "h1", texto: `${n7 + 2}. Conclusiones` }, { t: "p", texto: lleno(d.conclusiones) ? d.conclusiones : conclusionesSugeridas(d) });
     if (lleno(d.proxRevision)) B.push({ t: "p", runs: [{ texto: "Próxima revisión del DAFO: ", negrita: true }, { texto: fmtF(d.proxRevision) }] });
+    if (ant) B.push({ t: "h2", texto: `Cambios respecto a la edición ${ant.edicion || "00"}` }, ...bloquesComparacion(ant, d));
     const cand = candidatos(d);
     if (cand.length) B.push({ t: "salto" }, { t: "h1", texto: "Anexo I. Factores que merecen un análisis propio" }, { t: "tabla", fuente: 8, cab: ["Cód.", "Factor", "Análisis", "Proceso", "Motivo"], anchos: [7, 33, 13, 22, 25],
       filas: cand.map(f => [{ texto: codigo(f), negrita: true, fondo: FONDO_Q[f.tipo] }, f.texto, DESTINOS[f.candidato.destino].nom, f.candidato.proceso, f.candidato.motivo]) });
@@ -859,7 +1098,7 @@
         const m = prioridad(d), r = resultadoCruces(d), cod = {};
         d.factores.forEach(f => { cod[f.id] = codigo(f); });
         return {
-          id: d.id, titulo: nombreDafo(d), objeto: d.objeto, tipoObjeto: d.tipoObjeto || null, finalidad: d.finalidad || null, horizonte: d.horizonte, fecha: d.fecha, edicion: null,
+          id: d.id, titulo: nombreDafo(d), objeto: d.objeto, tipoObjeto: d.tipoObjeto || null, finalidad: d.finalidad || null, horizonte: d.horizonte, fecha: d.fecha, edicion: d.edicion || "00",
           criterio: { n: nPrioridad(d) },
           orientacion: r.orientacion ? BLOQUES[r.orientacion].postura : null,
           factores: TIPOS.flatMap(t => delTipo(d, t).filter(f => lleno(f.texto)).map(f => {
@@ -958,6 +1197,9 @@
       h7.push([T(`${codigoEst(e)}.${i + 1}`, "negrita"), T(codigoEst(e) + " · " + CAME[e.tipo].nom), T(x.que, "negrita"), T(x.quien), T(fmtF(x.inicio), "centro"), T(fmtF(x.fin), "centro"), T(x.recursos), T(x.como), T(FUERZAS[fuerzaMedida(x.que)] ? FUERZAS[fuerzaMedida(x.que)].nom : ""), T(x.indicador.nombre), T(x.indicador.formula), T(x.indicador.estandar, "centro"), T(x.indicador.fuente), T(ESTADOS[x.estado], "centro"), T(u ? u.valor : "", "centro"), T(u ? fmtF(u.fecha) : "", "centro"), T(sm === "ok" ? "Sí" : sm === "no" ? "No" : "", sm === "ok" ? "prio" : "centro")]); }));
     const h8 = cabecera("Factores que merecen un análisis propio · " + nom, ["Código", "Factor", "Análisis", "Proceso", "Motivo"]);
     candidatos(d).forEach(f => h8.push([T(codigo(f), "q_" + f.tipo), T(f.texto, "negrita"), T(DESTINOS[f.candidato.destino].nom), T(f.candidato.proceso), T(f.candidato.motivo)]));
+    const h9 = cabecera("Equipo y sesiones · " + nom, ["Nº", "Perfil", "Cargo", "Papel", "Nombre"]);
+    d.equipo.filter(m => lleno(m.perfil)).forEach((m, i) => h9.push([T(i + 1, "centro"), T(m.perfil, "negrita"), T(m.cargo), T(ROLES[m.rol] ? ROLES[m.rol].nom : ""), T(m.nombre)]));
+    if (d.sesiones.length) { h9.push([]); h9.push(["Sesión", "Fecha", "Actividad", "Duración", "Resultados"].map(x => T(x, "cab"))); d.sesiones.forEach((x, i) => h9.push([T(i + 1, "centro"), T(fmtF(x.fecha), "centro"), T(x.actividad), T(x.duracion, "centro"), T(x.resultados)])); }
     return { estilos: ESTILOS_XLSX, hojas: [
       { nombre: "Factores", filas: h1, opciones: { anchoColumnas: [8, 14, 46, 22, 34, 28, 16, 11, 11, 7, 8, 11, 34], congelar: { filas: 3, columnas: 0 }, altoFilas: { 1: 24 }, primera: true } },
       { nombre: "Matriz DAFO", filas: h2, opciones: { anchoColumnas: [60, 60], altoFilas: { 1: 24 } } },
@@ -965,6 +1207,7 @@
       { nombre: "Estrategias", filas: h6, opciones: { anchoColumnas: [8, 11, 50, 16, 9, 10, 18, 9, 34, 40, 14, 11], congelar: { filas: 3, columnas: 0 } } },
       { nombre: "Plan de acción", filas: h7, opciones: { anchoColumnas: [8, 16, 44, 22, 11, 11, 24, 30, 16, 34, 30, 11, 22, 11, 11, 11, 10], congelar: { filas: 3, columnas: 0 } } },
       { nombre: "Candidatos", filas: h8, opciones: { anchoColumnas: [8, 46, 14, 34, 46] } },
+      { nombre: "Equipo y sesiones", filas: h9, opciones: { anchoColumnas: [7, 40, 40, 24, 40] } },
       { nombre: "Fuentes", filas: h4, opciones: { anchoColumnas: [5, 40, 26, 14, 40, 20], congelar: { filas: 3, columnas: 0 } } },
       { nombre: "Ficha", filas: h5, opciones: { anchoColumnas: [26, 70, 50] } }
     ] };
@@ -1040,7 +1283,7 @@
   const ESQ = {
     fuente: { id: "id", tipo: { en: Object.keys(FUENTES_TIPO) }, nombre: [300], fecha: [40], nota: [1000] },
     factor: { id: "id", tipo: { en: TIPOS }, num: "ent", texto: [500], area: { en: [...Object.keys(AREAS), ...Object.keys(AMBITOS)] }, evidencia: [1000], fuenteId: "ref",
-      aporta: { en: Object.keys(APORTA) }, importancia: [2], probabilidad: [2], manual: { en: ["si", "no"] }, motivo: [500], candidato: { obj: "candidato" } },
+      aporta: { en: Object.keys(APORTA) }, importancia: [2], probabilidad: [2], manual: { en: ["si", "no"] }, motivo: [500], candidato: { obj: "candidato" }, votos: { de: "voto", max: 60 }, bloqueAcsa: { en: Object.keys(BLOQUES_ACSA) } },
     candidato: { destino: { en: ["amfe", "mapa", "auditoria"] }, proceso: [300], motivo: [800] },
     indicador: { nombre: [300], formula: [500], estandar: [100], fuente: [300] },
     objetivo: { texto: [1000], meta: [200], fecha: [20] },
@@ -1052,13 +1295,23 @@
     hist: { edicion: [10], fecha: [20], cambio: [300] },
     control: { elaborado: { de: "persona", max: 10 }, revisado: { de: "persona", max: 10 }, aprobado: { de: "persona", max: 10 }, historial: { de: "hist", max: 40 } },
     prioridad: { n: "ent" },
+    voto: { miembroId: "ref", importancia: [2], probabilidad: [2] },
+    miembro: { id: "id", perfil: [200], cargo: [200], rol: { en: ["coordinacion", "secretaria", "miembro", "pacientes", "metodologia"] }, nombre: [200] },
+    sesion: { id: "id", fecha: [20], actividad: [500], duracion: [40], asistentes: { lista: "ref", max: 40 }, resultados: [1500] },
+    idea: { id: "id", cuadrante: { en: TIPOS }, texto: [500], bloqueId: "ref", factorId: "ref" },
+    bloque: { id: "id", cuadrante: { en: TIPOS }, nombre: [200], comentario: [800] },
+    votoTgn: { miembroId: "ref", bloqueId: "ref", puntos: [2] },
+    tgn: { votos: { de: "votoTgn", max: 3000 } },
     dafo: { id: "id", titulo: [200], objeto: [300], tipoObjeto: { en: Object.keys(TIPOS_OBJETO) }, finalidad: { en: Object.keys(FINALIDADES) }, horizonte: [200],
       mision: [1500], vision: [1500], incluye: [1500], excluye: [1500], responsable: [300], fecha: [40],
-      fuentes: { de: "fuente", max: 60 }, factores: { de: "factor", max: 400 }, prioridad: { obj: "prioridad" }, cruces: "cruces", estrategias: { de: "estrategia", max: 60 }, conclusiones: [4000], proxRevision: [20], control: { obj: "control" }, notas: [3000], creado: [40], modificado: [40] }
+      fuentes: { de: "fuente", max: 60 }, equipo: { de: "miembro", max: 40 }, sesiones: { de: "sesion", max: 40 }, ideas: { de: "idea", max: 800 }, bloques: { de: "bloque", max: 200 }, tgn: { obj: "tgn" },
+      edicion: [10], anteriorId: "ref", factores: { de: "factor", max: 400 }, prioridad: { obj: "prioridad" }, cruces: "cruces", estrategias: { de: "estrategia", max: 60 }, conclusiones: [4000], proxRevision: [20], control: { obj: "control" }, notas: [3000], creado: [40], modificado: [40] }
   };
   const FABRICA = { fuente: nuevaFuente, factor: id => nuevoFactor(id), prioridad: () => ({ n: 5 }), candidato: nuevoCandidato, indicador: nuevoIndicador, objetivo: nuevoObjetivo,
     medida: nuevaMedida, accion: nuevaAccion, estrategia: id => nuevaEstrategia(id), persona: nuevaPersona, hist: () => ({ edicion: "", fecha: "", cambio: "" }),
-    control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), dafo: id => nuevoDafo(id, "") };
+    control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), dafo: id => nuevoDafo(id, ""),
+    voto: () => ({ miembroId: "", importancia: "", probabilidad: "" }), miembro: nuevoMiembro, sesion: nuevaSesion, idea: id => nuevaIdea(id), bloque: id => nuevoBloque(id),
+    votoTgn: () => ({ miembroId: "", bloqueId: "", puntos: "" }), tgn: () => ({ votos: [] }) };
   function sanear(esq, o, genId) {
     if (!o || typeof o !== "object" || Array.isArray(o)) return null;
     const S = ESQ[esq], r = FABRICA[esq](genId());
@@ -1095,6 +1348,13 @@
     // Cruces solo entre una fila interna (F, D) y una columna externa (O, A) que existan
     const tipoDe = {}; d.factores.forEach(f => { tipoDe[f.id] = f.tipo; });
     Object.keys(d.cruces).forEach(k => { const [a, b] = k.split("|"); if (!esInterno(tipoDe[a]) || !tipoDe[b] || esInterno(tipoDe[b])) delete d.cruces[k]; });
+    // Equipo, sesiones, ideas, bloques y votos: referencias rotas fuera
+    const miembros = new Set(d.equipo.map(m => m.id)), bloq = new Map(d.bloques.map(b => [b.id, b])), facs = new Set(d.factores.map(f => f.id));
+    if (!lleno(d.edicion)) d.edicion = "00";
+    d.sesiones.forEach(x => { x.asistentes = x.asistentes.filter(id => miembros.has(id)); });
+    d.ideas.forEach(i => { const b = bloq.get(i.bloqueId); if (!b || b.cuadrante !== i.cuadrante) i.bloqueId = ""; if (!facs.has(i.factorId)) i.factorId = ""; });
+    d.tgn.votos = d.tgn.votos.filter(v => miembros.has(v.miembroId) && bloq.has(v.bloqueId) && /^[123]$/.test(v.puntos));
+    d.factores.forEach(f => { f.votos = f.votos.filter(v => miembros.has(v.miembroId)); if (!esInterno(f.tipo)) f.bloqueAcsa = ""; });
     // Estrategias: solo factores que existen; números únicos
     const ids = new Set(d.factores.map(f => f.id)), usadosE = new Set();
     d.estrategias.forEach(e => { e.factores = e.factores.filter(id => ids.has(id)); if (!e.num || usadosE.has(e.num)) e.num = 0; else usadosE.add(e.num); });
@@ -1135,6 +1395,10 @@
     DESTINOS, sugerirDestino, candidatos, ESTADOS, FUERZAS, fuerzaMedida, vencida, leerEstandar, semaforo, ultimaMedida, smartAuto, accionesDe, avisosPlan, notaCalidad,
     conclusionesSugeridas, introduccionSugerida, nuevaPersona, nuevoControl, renovarIds, nuevaEstrategia, nuevaAccion, nuevaMedida, nuevoCandidato,
     documentoInforme, documentoResumen, documentoLamina,
+    ROLES, ESTAMENTOS, ESTAMENTO_NOM, estamentoDe, PERFILES_SUG, SESIONES_TIPO, nuevoMiembro, nuevaSesion, etiquetaMiembro, avisosEquipo,
+    PREGUNTAS_IDEAS, nuevaIdea, nuevoBloque, ideasParecidas, voto321, ponerVoto321, ranking, ideaAFactor, bloqueAFactor, avisosIdeas,
+    mediaVotos, discrepancia, ponerVoto, usarMedia, avisosVotos, bloqueAcsaDe, porBloquesAcsa,
+    nuevaEdicion, estadoEstrategia, ESTADOS_EST, compararEdiciones, revisionProxima, documentoHoja, bloquesComparacion,
     resumen, progreso, pasoPendiente, siguientePaso,
     tipoDeTexto, parsearFactores, incorporarFactores,
     ESQ, sanear, sanearDafo, sanearDatos, fusionar

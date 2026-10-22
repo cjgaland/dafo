@@ -227,6 +227,90 @@
     est(8, "M", "Reforzar la gestión de casos ante el aumento de la cronicidad", ["F3", "A1"], 2, 2, "cruce:FA:ej-fa-F3", ["", "", ""], []),
     est(9, "C", "Teleconsulta de medicina de familia para descargar la agenda presencial", ["D1", "O2"], 2, 3, "cruce:DO:ej-fa-D1", ["", "", ""], [], "no", "Se incluye en E2 (gestión de la demanda) y en E3 (teleconsulta de crónicos).")
   ];
+  // Equipo, sesiones, lluvia de ideas y votos del ejemplo
+  const EQUIPO_UGC = [
+    ["Director/a de la UGC", "Médico/a de familia", "coordinacion"], ["Coordinador/a de cuidados de enfermería", "Enfermero/a", "miembro"],
+    ["Médico/a de familia", "Tutor/a de residentes", "miembro"], ["Enfermero/a gestor/a de casos", "Enfermero/a", "miembro"],
+    ["Técnico/a en Cuidados Auxiliares de Enfermería (TCAE)", "", "miembro"], ["Administrativo/a de atención a la ciudadanía", "", "miembro"],
+    ["Representante de la asociación de pacientes crónicos", "", "pacientes"], ["Técnico/a de Calidad del Distrito", "", "secretaria"]
+  ].map(([perfil, cargo, rol], i) => ({ id: "ej-mi-" + (i + 1), perfil, cargo, rol, nombre: "" }));
+  const TODOS = EQUIPO_UGC.map(m => m.id);
+  const SESIONES_UGC = [
+    { id: "ej-se-1", fecha: "2026-11-04", actividad: "Lluvia de ideas y matriz DAFO (fortalezas, debilidades, oportunidades y amenazas)", duracion: "2 h", asistentes: TODOS, resultados: "36 ideas en 12 bloques; 24 factores con su dato" },
+    { id: "ej-se-2", fecha: "2026-11-11", actividad: "Votación de la importancia, priorización, matriz cruzada y estrategias CAME", duracion: "2 h", asistentes: TODOS, resultados: "20 factores prioritarios, orientación de reorientación y 6 estrategias elegidas" },
+    { id: "ej-se-3", fecha: "2026-11-18", actividad: "Plan de acción: objetivos, responsables, plazos e indicadores", duracion: "1 h 30 min", asistentes: TODOS.filter(x => x !== "ej-mi-7"), resultados: "Plan de acción con 9 acciones e indicadores" }
+  ];
+  // Bloques de la lluvia de ideas: [cuadrante, nombre, factor al que pasó, ideas]
+  const BLOQUES_UGC = [
+    ["F", "Equipo estable", "F1", ["La mayoría llevamos años aquí", "Casi no hay rotación de médicos ni de enfermeras", "Nos conocemos y nos cubrimos"]],
+    ["F", "Gestión de casos", "F3", ["Las gestoras de casos conocen a todos los crónicos complejos", "Los crónicos complejos tienen su enfermera de referencia", "Las altas de los crónicos se ven en pocos días"]],
+    ["F", "Docencia", "F6", ["Tenemos residentes de medicina y de enfermería", "Los residentes nos obligan a estar al día", "Somos unidad docente acreditada"]],
+    ["D", "Demora para la cita", "D1", ["Se tarda casi una semana en dar cita con el médico", "Muchas reclamaciones por la demora", "La agenda está llena todo el año"]],
+    ["D", "Conciliación al alta", "D2", ["No sabemos qué medicación traen del hospital", "Los informes de alta llegan tarde", "Nadie revisa la medicación tras el alta"]],
+    ["D", "Higiene de manos", "D5", ["No hay solución alcohólica en todas las consultas", "La observación de la higiene de manos salió baja", "Con prisa nos saltamos la higiene de manos"]],
+    ["O", "Apoyo del hospital", "O5", ["El hospital quiere una enfermera de enlace", "Medicina interna ofrece consultoría", "Hay buena relación con el hospital"]],
+    ["O", "Acreditación", "O4", ["La Agencia ayuda a preparar la acreditación", "Otras UGC del Distrito ya están acreditadas", "Hay guías y talleres para la acreditación"]],
+    ["O", "Teleconsulta", "O2", ["Llega la teleconsulta corporativa", "Los pacientes ya usan la app de salud", "Se podrá seguir a pacientes desde casa"]],
+    ["A", "Envejecimiento", "A1", ["Cada vez hay más mayores", "Más pacientes con varias enfermedades crónicas", "Más personas que viven solas"]],
+    ["A", "Jubilaciones", "A2", ["Se jubilan tres médicos en dos años", "Nadie quiere venir a un pueblo", "Las plazas tardan en cubrirse"]],
+    ["A", "Población de verano", "A3", ["En verano viene mucha gente de fuera", "En agosto se dispara la demanda", "Los desplazados no tienen historia aquí"]]
+  ];
+  const IDEAS_UGC = [], BLOQ_UGC = [], VOTOS_TGN_UGC = [];
+  BLOQUES_UGC.forEach(([t, nombre, fac, ideas], i) => {
+    const bid = "ej-bq-" + (i + 1);
+    BLOQ_UGC.push({ id: bid, cuadrante: t, nombre, comentario: "" });
+    ideas.forEach((texto, j) => IDEAS_UGC.push({ id: `ej-id-${i + 1}-${j + 1}`, cuadrante: t, texto, bloqueId: bid, factorId: "ej-fa-" + fac }));
+  });
+  // Grupo nominal: en cada cuadrante, cada miembro reparte 3, 2 y 1 puntos (tres pautas distintas)
+  const PAUTAS = [[3, 2, 1], [2, 3, 1], [3, 1, 2]];
+  ["F", "D", "O", "A"].forEach(t => {
+    const bq = BLOQ_UGC.filter(b => b.cuadrante === t);
+    EQUIPO_UGC.forEach((m, k) => PAUTAS[k % 3].forEach((p, j) => VOTOS_TGN_UGC.push({ miembroId: m.id, bloqueId: bq[j].id, puntos: String(p) })));
+  });
+  // Votación de la importancia (y la probabilidad) de cuatro factores: la media redondeada es el valor final
+  const VOTOS_UGC = {
+    D1: [[5], [5], [4], [5], [5], [5], [4], [5]], D2: [[5], [4], [5], [5], [5], [5], [5], [4]],
+    A1: [[5, 5], [4, 5], [5, 4], [5, 5], [5, 5], [5, 5], [4, 5], [5, 5]], A2: [[5, 4], [5, 4], [4, 4], [5, 5], [5, 4], [5, 4], [5, 4], [4, 3]]
+  };
+  const conVotos = f => { const v = VOTOS_UGC[f.tipo + f.num]; if (v) f.votos = v.map(([i, p], k) => ({ miembroId: "ej-mi-" + (k + 1), importancia: String(i), probabilidad: p ? String(p) : "" })); return f; };
+
+  // Edición anterior (2026) del mismo DAFO, para enseñar la comparación año a año
+  const DAFO_UGC_00 = {
+    id: "ej-dafo-ugc-00", titulo: "DAFO UGC de Atención Primaria 2026", objeto: "UGC de Atención Primaria", tipoObjeto: "ugc", finalidad: "acuerdo",
+    horizonte: "1 año (el del acuerdo de gestión 2026)", mision: "", vision: "", incluye: "", excluye: "", responsable: "Dirección de la UGC", fecha: "Noviembre de 2025",
+    edicion: "00", anteriorId: "", fuentes: [], equipo: [], sesiones: [], ideas: [], bloques: [], tgn: { votos: [] },
+    factores: [
+      fac("F", 1, "Equipo estable: el 80 % de la plantilla lleva más de 5 años en la UGC", "personas", "Plantilla 2025", "", 4),
+      fac("F", 2, "Control de la diabetes algo por encima de la media del Distrito", "resultados", "58 % con HbA1c menor de 8 % (Distrito: 54 %)", "", 3),
+      fac("F", 4, "Cultura de notificación de incidentes: 25 notificaciones en el último año", "seguridad", "Sistema de notificación", "", 3),
+      fac("F", 6, "Unidad docente acreditada con residentes", "docencia", "4 residentes por año", "", 3),
+      Object.assign(fac("F", 7, "Buena relación con el hospital de referencia", "procesos", "Sin datos", "", 3), { id: "ej-fa-F7-00" }),
+      fac("D", 1, "Demora media de 4 días para cita con medicina de familia", "resultados", "Acuerdo de gestión 2025", "", 4),
+      fac("D", 2, "Conciliación de la medicación tras el alta hospitalaria en el 30 % de los casos", "seguridad", "Acuerdo de gestión 2025", "", 4),
+      fac("D", 4, "Poca formación en seguridad del paciente", "personas", "Registro de formación", "", 3),
+      Object.assign(fac("D", 7, "No hay seguimiento proactivo de los pacientes crónicos complejos", "procesos", "Sin enfermería gestora de casos", "", 5), { id: "ej-fa-D7-00" }),
+      fac("O", 4, "Apoyo de la Agencia de Calidad Sanitaria para la acreditación", "sanitario", "Programa de acompañamiento", "", 4, 4),
+      Object.assign(fac("O", 7, "Programa del Distrito para implantar la enfermería gestora de casos", "sanitario", "Plan del Distrito 2026", "", 5, 5), { id: "ej-fa-O7-00" }),
+      fac("A", 1, "Envejecimiento de la población y aumento de la cronicidad", "social", "Pirámide de población", "", 5, 5),
+      fac("A", 2, "Jubilaciones próximas en medicina de familia", "economico", "Previsión del Distrito", "", 5, 3),
+      fac("A", 4, "Restricciones presupuestarias para sustituciones", "economico", "Instrucciones del Distrito", "", 4, 3)
+    ],
+    prioridad: { n: 5 }, cruces: {},
+    estrategias: [
+      { id: "ej-es-00-1", tipo: "E", num: 1, texto: "Implantar la enfermería gestora de casos aprovechando el programa del Distrito", factores: ["ej-fa-D7-00", "ej-fa-O7-00"], impacto: "3", viabilidad: "3", elegida: "", motivo: "", origen: "",
+        objetivo: { texto: "Seguir al menos a 100 pacientes crónicos complejos por gestión de casos", meta: "≥ 100", fecha: "2026-10-31" },
+        acciones: [acc("00-1", "Designar y formar a dos enfermeras gestoras de casos y abrir su agenda", "Coordinación de cuidados", "2026-01-15", "2026-04-30", "", "", ind("Pacientes crónicos complejos en seguimiento por gestión de casos", "Número de pacientes en seguimiento", "≥ 100", "Registro de gestión de casos"), "verificada", [["2026-10-01", "140", ""]])] },
+      { id: "ej-es-00-2", tipo: "A", num: 2, texto: "Reorganizar las agendas para bajar la demora ante el aumento de la demanda", factores: ["ej-fa-D1", "ej-fa-A1"], impacto: "3", viabilidad: "2", elegida: "", motivo: "", origen: "",
+        objetivo: { texto: "Bajar la demora media para cita con medicina de familia a 3 días", meta: "≤ 3 días", fecha: "2026-10-31" },
+        acciones: [acc("00-2", "Agenda de acto único en medicina de familia", "Dirección de la UGC", "2026-02-01", "2026-05-31", "", "", ind("Demora media para cita con medicina de familia (días)", "Media de días entre la petición y la cita", "≤ 3", "Cuadro de mando del Distrito"), "hecha", [["2026-09-30", "6", ""]])] }
+    ],
+    conclusiones: "El DAFO de 2026 señala como prioridades implantar la gestión de casos para los crónicos complejos y bajar la demora para cita con medicina de familia.",
+    proxRevision: "2026-11-15",
+    control: { elaborado: [{ nombre: "", cargo: "Dirección de la UGC" }], revisado: [{ nombre: "", cargo: "Coordinación de cuidados" }], aprobado: [{ nombre: "", cargo: "Dirección de Atención Primaria del Distrito" }],
+      historial: [{ edicion: "00", fecha: "2025-11-14", cambio: "Documento inicial" }] },
+    notas: "Edición anterior del ejemplo (inventada), para comparar con la de 2027.",
+    creado: "2025-11-14T08:00:00.000Z", modificado: "2025-11-14T08:00:00.000Z"
+  };
   const DAFO_UGC = {
     id: "ej-dafo-ugc", titulo: "DAFO UGC de Atención Primaria 2027", objeto: "UGC de Atención Primaria", tipoObjeto: "ugc", finalidad: "acuerdo",
     horizonte: "1 año (el del acuerdo de gestión 2027), preparando también la acreditación",
@@ -235,6 +319,8 @@
     incluye: "El centro de salud y sus dos consultorios: medicina de familia, enfermería, pediatría, trabajo social y atención a la ciudadanía.",
     excluye: "El dispositivo de urgencias de atención primaria y la unidad de salud mental comunitaria.",
     responsable: "Dirección de la UGC y coordinación de cuidados", fecha: "Noviembre de 2026",
+    edicion: "01", anteriorId: "ej-dafo-ugc-00",
+    equipo: EQUIPO_UGC, sesiones: SESIONES_UGC, ideas: IDEAS_UGC, bloques: BLOQ_UGC, tgn: { votos: VOTOS_TGN_UGC },
     fuentes: [
       fte("ag", "acuerdo", "Evaluación del acuerdo de gestión 2026", "2026", "Demora, accesibilidad, control de crónicos, conciliación."),
       fte("enc", "encuesta", "Encuesta de satisfacción de usuarios", "2026", "91 % satisfechos o muy satisfechos."),
@@ -272,7 +358,7 @@
       fac("A", 4, "Restricciones presupuestarias para sustituciones y nuevas contrataciones", "economico", "Instrucciones del Distrito para 2027", "plan", 4, 3, "direccion"),
       fac("A", 5, "Caídas del sistema corporativo de historia digital varias veces al año, que paralizan la consulta", "tecnologico", "5 incidentes notificados; dependen de los servicios centrales", "not", 3, 3),
       fac("A", 6, "Bulos sanitarios en redes sociales que generan consultas evitables", "social", "Percepción del equipo; sin datos", "", 2, 3, "equipo")
-    ],
+    ].map(conVotos),
     prioridad: { n: 5 },
     cruces: cruces(
       ["F3", "F1", "F2", "F4", "F6", "D1", "D2", "D5", "D3", "D4"],
@@ -293,22 +379,24 @@
     conclusiones: "",
     proxRevision: "2027-11-15",
     control: { elaborado: [{ nombre: "", cargo: "Dirección de la UGC" }], revisado: [{ nombre: "", cargo: "Coordinación de cuidados" }], aprobado: [{ nombre: "", cargo: "Dirección de Atención Primaria del Distrito" }],
-      historial: [{ edicion: "00", fecha: "2026-11-15", cambio: "Documento inicial" }] },
+      historial: [{ edicion: "00", fecha: "2025-11-14", cambio: "Documento inicial" }, { edicion: "01", fecha: "2026-11-15", cambio: "Revisión anual del DAFO" }] },
     notas: "Ejemplo inventado: la UGC, sus cifras y sus fuentes no corresponden a ningún centro real.",
     creado: "2026-10-22T08:00:00.000Z", modificado: "2026-10-22T08:00:00.000Z"
   };
 
   const EJEMPLOS = {
-    dafos: [DAFO_UGC],
+    dafos: [DAFO_UGC, DAFO_UGC_00],
     fichas: [
       { t: "1 · Qué analizamos", s: "Objeto, finalidad (acuerdo de gestión), horizonte, misión y visión", href: "#/dafo/ej-dafo-ugc/1" },
-      { t: "2 · Fuentes", s: "Ocho fuentes de datos: acuerdo, encuestas, notificaciones, indicadores…", href: "#/dafo/ej-dafo-ugc/2" },
+      { t: "2 · Equipo y fuentes", s: "8 perfiles, 3 sesiones y 8 fuentes de datos", href: "#/dafo/ej-dafo-ugc/2" },
+      { t: "Lluvia de ideas", s: "36 ideas en 12 bloques, votadas por el grupo nominal", href: "#/dafo/ej-dafo-ugc/ideas" },
       { t: "3 · Dentro", s: "6 fortalezas y 6 debilidades, cada una con su dato", href: "#/dafo/ej-dafo-ugc/3" },
       { t: "4 · Fuera", s: "6 oportunidades y 6 amenazas con importancia y probabilidad", href: "#/dafo/ej-dafo-ugc/4" },
+      { t: "Votar", s: "La votación de la importancia de D1, D2, A1 y A2", href: "#/dafo/ej-dafo-ugc/votar" },
       { t: "5 · Priorizar", s: "Los 5 de más peso de cada cuadrante", href: "#/dafo/ej-dafo-ugc/5" },
       { t: "6 · Cruzar", s: "Matriz cruzada de 100 casillas: orientación de reorientación (DO)", href: "#/dafo/ej-dafo-ugc/6" },
       { t: "7 · Estrategias CAME", s: "9 estrategias, 6 elegidas por impacto y viabilidad; 2 candidatos a AMFE y auditoría", href: "#/dafo/ej-dafo-ugc/7" },
-      { t: "8 · Plan de acción", s: "Objetivos, 9 acciones con indicador, seguimiento y documentos", href: "#/dafo/ej-dafo-ugc/8" }
+      { t: "8 · Plan de acción", s: "Objetivos, 9 acciones con indicador, seguimiento, comparación con 2026 y documentos", href: "#/dafo/ej-dafo-ugc/8" }
     ]
   };
 

@@ -8,6 +8,8 @@ Ocho pasos: qué se analiza y para qué; fuentes de información; mirar hacia de
 - Cada factor con el dato que lo respalda, su importancia y, en lo externo, su probabilidad y su peso.
 - Avisos didácticos de las trampas más habituales: algo externo escrito como interno (o al revés), una solución escrita como factor, factores vagos, repetidos o sin datos.
 - Pegar los factores desde Excel, Calc o Word.
+- Trabajo en equipo: equipo y sesiones, lluvia de ideas con grupo nominal, votación de la importancia, modo reunión y hoja de trabajo para las sesiones en papel.
+- Ediciones anuales con comparación y vista por bloques ACSA del análisis interno.
 - Prioridad por cuadrante, matriz cruzada con orientación estratégica, estrategias CAME elegidas por impacto y viabilidad, y plan de acción con indicadores y seguimiento.
 - Informe DAFO · CAME y resumen para la Dirección en Word y PDF, lámina DAFO y Excel.
 - Paquete de intercambio para las otras apps del ecosistema (factores, estrategias y candidatos a AMFE, Mapa de Riesgos o auditoría).

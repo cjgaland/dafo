@@ -1516,3 +1516,40 @@ button.cz:hover { border-color: var(--cyan); }
 .doc-prev--lamina .doc-t { font-size: 13px; }
 .doc-prev--lamina .doc-h1 { font-size: 22px; }
 @media print { .plan, .acc-card { break-inside: avoid; } }
+/* ---------- Entrega 4 · Trabajo en equipo ---------- */
+.herr-card { border-left: 5px solid var(--cyan); }
+.cuad-tabs { margin: 10px 0; }
+.cuad .guia { margin: 2px 0 8px; }
+.cuad .ideas-lista { margin: 8px 0 4px; }
+.cuad .sub-h { margin-top: 16px; }
+.cuad .idea-nueva .txt-in { background: var(--bg-2); }
+.idea-ok { text-decoration: none; white-space: nowrap; }
+/* Votación de la importancia */
+.vt-t { min-width: 520px; }
+.vt-t td { vertical-align: middle; }
+.vt-t td:first-child { min-width: 200px; text-align: left; font-size: 13px; }
+.vt-t .fx-cod { min-width: 30px; height: 21px; font-size: 11.5px; margin-right: 4px; }
+.vt-t .vot-in { width: 34px; padding: 4px 2px; text-align: center; font-size: 15px; }
+.vt-t .vot-in + .vot-in { margin-top: 3px; }
+.vt-m { white-space: nowrap; font-size: 13px; }
+.vt-disc { color: var(--red); font-weight: 800; }
+/* Vista por bloques ACSA */
+.vista-int { margin: 12px 0 4px; max-width: 360px; }
+.acsa { display: grid; gap: 10px; margin: 12px 0; }
+@media (min-width: 900px) { .acsa { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.acsa-b { padding: 10px 12px; border-radius: var(--radius-lg); border: 1px solid var(--border); border-left: 5px solid var(--cyan); background: var(--bg-2); }
+.acsa-b--vacio { border-left-color: var(--amber); background: var(--amber-dim); }
+.acsa-b .sub-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 6px; }
+.acsa-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font-size: 13.5px; }
+.acsa-l .fx-cod { min-width: 30px; height: 21px; font-size: 11.5px; margin-right: 4px; }
+/* Modo reunión en las piezas de DAFO */
+body.modo-reunion .fx textarea.txt-in, body.modo-reunion .pf-txt b { font-size: 19px; }
+body.modo-reunion .dm-l { font-size: 17px; }
+body.modo-reunion .dm-t { font-size: 20px; }
+body.modo-reunion .cz { width: 48px; height: 42px; font-size: 19px; }
+body.modo-reunion .cz-h span { min-width: 44px; height: 32px; font-size: 15px; }
+body.modo-reunion .cz-fila, body.modo-reunion .cz-par { font-size: 18px; }
+body.modo-reunion .vt-t { font-size: 16px; } body.modo-reunion .vt-t .vot-in { width: 44px; font-size: 20px; }
+body.modo-reunion .tgn-t, body.modo-reunion .tgn-res { font-size: 16px; }
+body.modo-reunion .cuad-t { font-size: 24px; }
+body.modo-reunion .wiz-steps, body.modo-reunion .herr-card { display: none; }

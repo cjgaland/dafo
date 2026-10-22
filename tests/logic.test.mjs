@@ -221,7 +221,7 @@ eq("Ejemplo: progreso de los pasos 5 y 6", [L.progreso(ej)[5], L.progreso(ej)[6]
 // Excel
 const X = require("../xlsx.js");
 const libro = L.hojasExcel(ej, "22/10/2026");
-eq("Excel: hojas", libro.hojas.map(h => h.nombre), ["Factores", "Matriz DAFO", "Matriz cruzada", "Estrategias", "Plan de acción", "Candidatos", "Fuentes", "Ficha"]);
+eq("Excel: hojas", libro.hojas.map(h => h.nombre), ["Factores", "Matriz DAFO", "Matriz cruzada", "Estrategias", "Plan de acción", "Candidatos", "Equipo y sesiones", "Fuentes", "Ficha"]);
 eq("Excel: una fila por factor", libro.hojas[0].filas.length - 3, 24);
 t("Excel: estilos usados existen", libro.hojas.every(h => h.filas.every(f => f.every(c => !c || !c.estilo || L.ESTILOS_XLSX[c.estilo]))));
 const bytes = X.construirLibroXlsx(libro);
@@ -333,6 +333,93 @@ const W = require("../docx.js");
 const wb = W.construirDocx(Object.assign({ pie: "prueba" }, dI));
 t("Word del informe: se construye (ZIP)", wb.length > 5000 && wb[0] === 0x50 && wb[1] === 0x4b);
 t("Word de la lámina apaisada", W.construirDocx(Object.assign({ pie: "prueba" }, dL)).length > 2000);
+
+// ---------- Entrega 4 ----------
+// Equipo
+const eqd = L.nuevoDafo("eq", "t");
+eq("Equipo vacío: sin avisos (es opcional)", L.avisosEquipo(eqd).length, 0);
+eqd.equipo = [Object.assign(L.nuevoMiembro("m1"), { perfil: "Director de la UGC", rol: "coordinacion" }), Object.assign(L.nuevoMiembro("m2"), { perfil: "Jefa de servicio" }), Object.assign(L.nuevoMiembro("m3"), { perfil: "Director de enfermería" })];
+const aeq = L.avisosEquipo(eqd);
+t("Equipo: solo dirección", aeq.some(x => x.texto.includes("Solo hay dirección")));
+t("Equipo: sin secretaría", aeq.some(x => x.texto.includes("secretaría")));
+t("Equipo: pocos perfiles", aeq.some(x => x.texto.includes("3 perfiles")));
+t("Equipo: sin sesiones", aeq.some(x => x.texto.includes("sesiones")));
+t("Los avisos del equipo salen en el paso 2", L.avisosDe(eqd, 2).some(x => x.paso === 2 && x.texto.includes("Solo hay dirección")));
+eq("Estamento", ["Enfermera gestora de casos", "TCAE", "Médico de familia", "Trabajadora social", "Representante de la asociación de pacientes"].map(L.estamentoDe), ["enfermeria", "tcae", "medico", "social", "paciente"]);
+
+// Lluvia de ideas y grupo nominal
+const ide = L.nuevoDafo("id", "t");
+ide.equipo = [L.nuevoMiembro("a"), L.nuevoMiembro("b")].map((m, i) => Object.assign(m, { perfil: "Perfil " + i }));
+ide.bloques = [L.nuevoBloque("b1", "D", "Demora"), L.nuevoBloque("b2", "D", "Conciliación"), L.nuevoBloque("b3", "D", "Protocolos"), L.nuevoBloque("b4", "F", "Equipo")];
+ide.ideas = [Object.assign(L.nuevaIdea("i1", "D"), { texto: "Se tarda una semana en dar cita con el médico", bloqueId: "b1" }), Object.assign(L.nuevaIdea("i2", "D"), { texto: "Tarda una semana la cita con el médico", bloqueId: "b1" }), Object.assign(L.nuevaIdea("i3", "D"), { texto: "La Consejería no cubre las bajas" })];
+eq("Ideas parecidas", L.ideasParecidas(ide).map(([x, y]) => x.id + y.id), ["i1i2"]);
+t("Idea externa en debilidades", L.avisosIdeas(ide).some(x => x.texto.includes("La Consejería") && x.texto.includes("viene de fuera")));
+L.ponerVoto321(ide, "a", "D", 3, "b1"); L.ponerVoto321(ide, "a", "D", 2, "b2"); L.ponerVoto321(ide, "a", "D", 1, "b3");
+L.ponerVoto321(ide, "b", "D", 3, "b2"); L.ponerVoto321(ide, "b", "D", 2, "b1");
+L.ponerVoto321(ide, "b", "D", 3, "b1");   // cambia de opinión: el 3 va a b1 y b1 deja de tener su 2
+eq("Votos 3-2-1: uno por valor y por bloque", ide.tgn.votos.filter(v => v.miembroId === "b").map(v => v.bloqueId + v.puntos), ["b1" + "3"]);
+eq("Recuento por cuadrante", L.ranking(ide, "D").map(r => r.b.nombre + r.total), ["Demora6", "Conciliación2", "Protocolos1"]);
+eq("Voto leído", [L.voto321(ide, "a", "D", 3), L.voto321(ide, "a", "F", 3)], ["b1", ""]);
+const fb = L.bloqueAFactor(ide, ide.bloques[0], gid);
+eq("Bloque a factor: un factor y sus ideas enlazadas", [L.codigo(fb), fb.texto, ide.ideas.filter(i => i.factorId === fb.id).length], ["D1", "Demora", 2]);
+const fi = L.ideaAFactor(ide, ide.ideas[2], gid);
+eq("Idea a factor", [L.codigo(fi), fi.texto, L.ideaAFactor(ide, ide.ideas[2], gid)], ["D2", "La Consejería no cubre las bajas", null]);
+const sid = L.sanearDafo(Object.assign(JSON.parse(JSON.stringify(ide)), { ideas: [...ide.ideas, { id: "i9", cuadrante: "F", texto: "x", bloqueId: "b1", factorId: "nada" }], tgn: { votos: [...ide.tgn.votos, { miembroId: "zz", bloqueId: "b1", puntos: "3" }, { miembroId: "a", bloqueId: "b4", puntos: "7" }] } }), gid, "t");
+eq("Saneado: idea con bloque de otro cuadrante y factor que no existe", [sid.ideas[3].bloqueId, sid.ideas[3].factorId], ["", ""]);
+eq("Saneado: votos de miembros o valores raros fuera", sid.tgn.votos.length, ide.tgn.votos.length);
+
+// Votación de la importancia
+const fv = Object.assign(L.nuevoFactor("v1", "A", 1), { texto: "Jubilaciones", importancia: "4", probabilidad: "4" });
+L.ponerVoto(fv, "a", "importancia", "5"); L.ponerVoto(fv, "a", "probabilidad", "4"); L.ponerVoto(fv, "b", "importancia", "2"); L.ponerVoto(fv, "b", "probabilidad", "4");
+eq("Media de votos (redondeo 0,5 hacia arriba)", [L.mediaVotos(fv).importancia.media, L.mediaVotos(fv).importancia.rango, L.mediaVotos(fv).probabilidad.media], [4, 3, 4]);
+eq("Discrepancia de 3 puntos o más", L.discrepancia(fv), ["importancia"]);
+L.ponerVoto(fv, "b", "importancia", ""); L.ponerVoto(fv, "b", "probabilidad", "");
+eq("Votos vacíos se quitan", fv.votos.length, 1);
+eq("Usar la media", [L.usarMedia(fv), fv.importancia, fv.probabilidad, L.usarMedia(fv)], [true, "5", "4", false]);
+const dv = L.nuevoDafo("dv", "t"); dv.equipo = ide.equipo; dv.factores = [Object.assign(L.nuevoFactor("w1", "D", 1), { texto: "Demora", importancia: "2", votos: [{ miembroId: "a", importancia: "5", probabilidad: "" }, { miembroId: "b", importancia: "1", probabilidad: "" }] })];
+const avv = L.avisosVotos(dv);
+t("Votar: discrepancia avisada", avv.some(x => x.factor === "w1" && x.texto.includes("4 puntos")));
+t("Votar: valor final distinto de la media", avv.some(x => x.texto.includes("no coincide con la media")));
+t("Priorizar avisa de votos separados", L.avisosPriorizar(dv).some(x => x.texto.includes("votos del equipo están muy separados")));
+eq("Interno: sin media de probabilidad", L.mediaVotos(dv.factores[0]).probabilidad, null);
+
+// Bloques ACSA
+eq("Bloque ACSA por el área o elegido", [L.bloqueAcsaDe(Object.assign(L.nuevoFactor("q1", "F"), { area: "personas" })), L.bloqueAcsaDe(Object.assign(L.nuevoFactor("q2", "D"), { area: "personas", bloqueAcsa: "resultados" })), L.bloqueAcsaDe(Object.assign(L.nuevoFactor("q3", "O"), { area: "social" }))], ["profesionales", "resultados", ""]);
+eq("Ejemplo por bloques ACSA", L.porBloquesAcsa(ej).map(b => b.k + ":" + b.F.length + "/" + b.D.length), ["ciudadano:1/0", "organizacion:2/3", "profesionales:2/1", "soporte:0/1", "resultados:1/1"]);
+const acsa = JSON.parse(JSON.stringify(ej)); acsa.finalidad = "acsa"; acsa.factores = acsa.factores.filter(f => f.area !== "recursos");
+t("Acreditación: aviso de bloque sin factores", L.avisosInterno(acsa).some(x => x.texto.includes("«Procesos de soporte»")));
+
+// Ediciones
+const e00 = L.sanearDafo(JSON.parse(JSON.stringify(C.EJEMPLOS.dafos[1])), gid, "t");
+const cmp = L.compararEdiciones(e00, ej);
+eq("Comparación de ediciones", cmp.cuenta, { mantienen: 11, nuevos: 13, desaparecen: 3, suben: 5, bajan: 0, cumplidas: 1 });
+eq("Desaparecen", cmp.desaparecen.map(L.codigo), ["F7", "D7", "O7"]);
+eq("Estrategias de la edición anterior", cmp.estrategias.map(x => L.codigoEst(x.e) + ":" + x.estado), ["E1:cumplida", "E2:sinlograr"]);
+eq("Orientación antes y ahora", cmp.orientacion, { antes: null, ahora: "DO" });
+const ne = L.nuevaEdicion(ej, gid, "2027-11-10T09:00:00.000Z");
+eq("Edición nueva", [ne.edicion, ne.anteriorId, ne.titulo, ne.proxRevision, ne.ideas.length, ne.control.historial.slice(-1)[0].edicion], ["02", ej.id, "DAFO UGC de Atención Primaria 2028", "", 0, "02"]);
+eq("Edición nueva: mismos factores", L.compararEdiciones(ej, ne).cuenta.mantienen, 24);
+eq("Revisión próxima", [L.revisionProxima(ej, "2027-11-01"), L.revisionProxima(ej, "2027-12-01"), L.revisionProxima(ej, "2027-01-01")], [{ dias: 14, vencida: false }, { dias: -16, vencida: true }, null]);
+t("Informe con la comparación", L.documentoInforme(ej, "hoy", e00).bloques.some(b => b.t === "h2" && b.texto === "Cambios respecto a la edición 00"));
+t("Informe con el equipo y las sesiones", L.documentoInforme(ej, "hoy").bloques.some(b => b.t === "h2" && b.texto === "Equipo de trabajo"));
+eq("Intercambio con la edición", L.paqueteIntercambio([ej], "x", "y").dafos[0].edicion, "01");
+
+// Hoja de trabajo
+const hj = L.documentoHoja(ej, "hoy");
+eq("Hoja de trabajo: apartados", hj.bloques.filter(b => b.t === "h1").map(b => b.texto), ["1. Lluvia de ideas", "2. Mi votación de la importancia", "3. Matriz cruzada", "4. Escalas"]);
+t("Hoja de trabajo de un DAFO vacío", L.documentoHoja(L.nuevoDafo("v", "t"), "hoy").bloques.filter(b => b.t === "h1").length === 3);
+t("Word de la hoja de trabajo", W.construirDocx(Object.assign({ pie: "x" }, hj)).length > 3000);
+
+// Ids nuevos con equipo, ideas y votos
+const rn4 = L.renovarIds(JSON.parse(JSON.stringify(ej)), gid);
+t("Ids nuevos: equipo, ideas y bloques sin ids de ejemplo", !/"ej-/.test(JSON.stringify([rn4.equipo, rn4.sesiones, rn4.ideas, rn4.bloques, rn4.tgn, rn4.factores.map(f => f.votos)])));
+const rn4s = L.sanearDafo(JSON.parse(JSON.stringify(rn4)), gid, "t");
+eq("Ids nuevos: referencias conservadas", [rn4s.sesiones[0].asistentes.length, rn4s.ideas.filter(i => i.factorId && i.bloqueId).length, rn4s.tgn.votos.length, rn4s.factores.reduce((s2, f) => s2 + f.votos.length, 0), rn4s.anteriorId], [8, 36, 96, 32, ""]);
+
+// Ejemplo
+eq("Ejemplo: equipo, sesiones, ideas, bloques y votos", [ej.equipo.length, ej.sesiones.length, ej.ideas.length, ej.bloques.length, ej.tgn.votos.length], [8, 3, 36, 12, 96]);
+eq("Ejemplo: sin avisos de ideas ni de votos", [...L.avisosDe(ej, "ideas"), ...L.avisosDe(ej, "votar"), ...L.avisosEquipo(ej)].map(x => x.texto), []);
+eq("Ejemplo: recuento de D", L.ranking(ej, "D").map(r => r.b.nombre + " " + r.total), ["Demora para la cita 21", "Conciliación al alta 17", "Higiene de manos 10"]);
 
 // Contenido
 eq("Aprende: 7 temas", C.TEMAS.map(x => x.n), [1, 2, 3, 4, 5, 6, 7]);
