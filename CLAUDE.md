@@ -1,8 +1,8 @@
 # CLAUDE.md — DAFO · CAME
 
-> Documento común a todas las apps (lista, carpetas, identidad visual e intercambio de datos): `/Users/Trabajo/Desktop/Ecosistema Calidad/ECOSISTEMA.md`.
+> Documento común a todas las apps (lista, carpetas, identidad visual e intercambio de datos): `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/ECOSISTEMA.md`.
 
-Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo, las decisiones del autor y el plan por entregas están en `/Users/Trabajo/Desktop/DAFO/Diseño/DISEÑO_DAFO.md` (léelo también al empezar una sesión).
+Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo, las decisiones del autor y el plan por entregas están en `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/DAFO/Diseño/DISEÑO_DAFO.md` (léelo también al empezar una sesión).
 
 ## 1. Descripción
 PWA estática (sin build, sin dependencias, sin CDN) para hacer, **paso a paso y de forma didáctica**, el **análisis DAFO** (debilidades, amenazas, fortalezas y oportunidades) de un servicio, unidad o proyecto sanitario y, a partir de él, el **análisis CAME** (corregir, afrontar, mantener, explotar) y un **plan de acción con indicadores**. Metodología estándar (sin curso propio), adaptada a la gestión sanitaria: acuerdo de gestión de una UGC, acreditación ACSA, plan estratégico, proyecto nuevo. Herramienta docente y de apoyo; no sustituye el criterio profesional.
@@ -30,19 +30,19 @@ Rutas: `#/` inicio · `#/dafo` mis DAFO · `#/dafo/nuevo` · `#/dafo/<id>/<1-8>`
 Datos: `localStorage["dafo-datos"]` = `{ app: "dafo", v, ultimaCopia, dafos: [] }`, guardado con 250 ms de retardo y al salir. Al cargar e importar se pasa SIEMPRE por `sanearDatos`. **Al añadir un campo nuevo**: añadirlo a la fábrica (`nuevoX`) y a `ESQ` en logic.js (si no, el saneado lo borra al recargar). Importancia y probabilidad se guardan como texto; el peso, el orden y los puestos se calculan siempre. Los ejemplos viven en memoria (ids `ej-…`) y nunca se guardan.
 
 ## 3. Pruebas en el navegador
-El puerto 8769 lo usa Flujograma. DAFO usa el **8770**: `cd "/Users/Trabajo/Desktop/DAFO/Aplicación" && python3 -m http.server 8770` y la vista previa `app-dafo` de `/Users/Trabajo/Desktop/DAFO/.claude/launch.json` (solo URL). El navegador integrado no admite service workers (el error de consola al registrarlo es normal). Revisar siempre en escritorio y en móvil (360 px, sin scroll horizontal) y en modo oscuro. Icono: `icon-512.svg` → PNG con `qlmanage -t -s 512` y tamaños con `sips -z`.
+El puerto 8769 lo usa Flujograma. DAFO usa el **8770**: `cd "/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/DAFO/Aplicación" && python3 -m http.server 8770` y la vista previa `app-dafo` de `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/DAFO/.claude/launch.json` (solo URL). El navegador integrado no admite service workers (el error de consola al registrarlo es normal). Revisar siempre en escritorio y en móvil (360 px, sin scroll horizontal) y en modo oscuro. Icono: `icon-512.svg` → PNG con `qlmanage -t -s 512` y tamaños con `sips -z`.
 
 ## 4. Versiones
 `APP_VERSION` y `NOVEDADES` al principio de `app.js` (formato AAAA.NN, la más reciente arriba). Claves de localStorage: `dafo-datos`, `dafo-tema`, `dafo-bienvenida-vista`, `dafo-version-vista`, `dafo-facil-abierto`, `dafo-intercambio` (para otras apps) y `dafo-vista-cruce` (tabla o pregunta a pregunta), `dafo-vista-interno` (por cuadrantes o por bloques ACSA).
 
 ## 5. Copias de seguridad locales
 ```
-Desktop/DAFO/
+Desktop/Calidad&Seguridad/Ecosistema Calidad/DAFO/
 ├── Aplicación/   ← la app (este repositorio git, lo que se publica)
 ├── Backup/       ← 5 copias más recientes, fuera del repositorio
 └── Diseño/       ← DISEÑO_DAFO.md
 ```
-`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/DAFO" --name DAFO --exclude "Curso*" --exclude "Documentos*" --exclude "*.docx" --exclude .claude` (copia `Aplicación/` y `Diseño/`). Hacer una antes de cada publicación.
+`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/DAFO" --name DAFO --exclude "Curso*" --exclude "Documentos*" --exclude "*.docx" --exclude .claude` (copia `Aplicación/` y `Diseño/`). Hacer una antes de cada publicación.
 
 ## 6. Publicación
 Publicada el 2026-10-22 (v2026.05) con permiso del autor: repositorio público `cjgaland/dafo`, GitHub Pages desde `main` (raíz) → https://cjgaland.github.io/dafo/. Cada nueva publicación (push) solo cuando el autor lo pida. El remoto `origin` es SSH (`git@github.com:cjgaland/dafo.git`); si SSH no conecta desde la sesión, subir por HTTPS con `git push https://github.com/cjgaland/dafo.git main` (usa las credenciales de `gh`). Pasos por versión: copia de seguridad; entrada en `NOVEDADES` + `APP_VERSION`; mismos `?v=` en index.html; subir `CACHE_NAME` en sw.js; tests; commit en español terminado en `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
