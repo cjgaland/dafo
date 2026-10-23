@@ -15,6 +15,7 @@
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
   const URL_AMFE = "https://cjgaland.github.io/amfe/";
   const URL_FLUJO = "https://cjgaland.github.io/flujograma/";
+  const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -856,7 +857,7 @@
   // ---------- Candidatos para otras apps (AMFE, Mapa de Riesgos, Auditorías) ----------
   const DESTINOS = {
     amfe: { nom: "AMFE", que: "Un proceso concreto con riesgo para el paciente: analizar paso a paso qué puede fallar.", url: URL_AMFE },
-    mapa: { nom: "Mapa de Riesgos", que: "Un proceso completo que hay que ver de principio a fin, con su flujograma.", url: URL_AUD },
+    mapa: { nom: "Mapa de Riesgos", que: "Un proceso completo que hay que ver de principio a fin, con su flujograma.", url: URL_MAPA },
     auditoria: { nom: "Auditoría", que: "Una práctica que hay que medir: si se cumple y en qué medida.", url: URL_AUD }
   };
   const RE_AUDITAR = /higiene de manos|registr|cumpliment|cumplimiento|adherencia|identificacion del paciente|consentimiento|caducad/;
@@ -1415,7 +1416,7 @@
   }
 
   const API = {
-    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_AMFE, URL_FLUJO,
+    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_AMFE, URL_FLUJO, URL_MAPA,
     lleno, sinTildes, num, entero1a5, corto, normal, plural, minuscula,
     CUADRANTES, TIPOS, esInterno, PASOS,
     TIPOS_OBJETO, FINALIDADES, aniosHorizonte, FUENTES_TIPO, APORTA, AREAS, AMBITOS, BLOQUES_ACSA, AREA_A_BLOQUE, areasDe, nombreArea,

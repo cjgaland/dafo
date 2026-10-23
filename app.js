@@ -14,8 +14,10 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.06";
+  const APP_VERSION = "2026.07";
   const NOVEDADES = [
+    { version: "2026.07", fecha: "Octubre 2026", titulo: "Nueva app hermana: Mapa de Riesgos", cambios: [
+      "Enlace a la nueva app hermana Mapa de Riesgos en la portada y en «Acerca de». «Llevar a… Mapa de Riesgos» abre ahora esa app (antes abría Auditorías), y su botón «Traer de DAFO» recoge los factores que marques para un mapa de riesgos."] },
     { version: "2026.06", fecha: "Octubre 2026", titulo: "Nueva app hermana: Flujograma", cambios: [
       "Enlace a la nueva app hermana Flujograma (escribe los pasos de un proceso y la app dibuja el diagrama, con sus puntos críticos) en la portada y en «Acerca de». La portada enlaza también a Tamaño Muestral."] },
     { version: "2026.05", fecha: "Octubre 2026", titulo: "Ponte a prueba, minicasos y «Traer de AMFE»", cambios: [
@@ -242,6 +244,7 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña los indicadores</b> con los que medirás tu plan de acción.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_FLUJO}" target="_blank" rel="noopener"><span class="guide-num">→</span><div><div class="guide-q">Flujograma ↗</div><div class="guide-a">App hermana: <b>dibuja el flujograma</b> del proceso que quieres mejorar, con sus puntos críticos.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b> para medir tus indicadores.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_MAPA}" target="_blank" rel="noopener"><span class="guide-num">◆</span><div><div class="guide-q">Mapa de Riesgos ↗</div><div class="guide-a">App hermana: <b>elabora el mapa de riesgos</b> de un proceso; con su «Traer de DAFO» recoge los factores que marques para un mapa de riesgos.</div></div><span class="guide-go">›</span></a>
       </div>
       ${practica("<b>Protección de datos:</b> un DAFO analiza una unidad, no a personas. No escribas nombres de pacientes ni de profesionales, ni números de historia clínica.")}`;
   }
@@ -1402,10 +1405,10 @@
     guardar(true);
     try { if (navigator.clipboard) navigator.clipboard.writeText(proc).catch(() => {}); } catch (e) { /* */ }
     const donde = f.candidato.destino === "amfe" ? "<p>En <b>AMFE</b>, crea un AMFE nuevo y pega el nombre del proceso.</p>"
-      : f.candidato.destino === "mapa" ? "<p>La app <b>Mapa de Riesgos</b> todavía no está publicada. Mientras, <b>Auditorías</b> tiene su propio Mapa de Riesgos: créalo allí con este proceso.</p>"
+      : f.candidato.destino === "mapa" ? "<p>En <b>Mapa de Riesgos</b>, pulsa «Traer de DAFO» para traer este factor con su dato y su motivo, o crea un mapa nuevo y pega el nombre del proceso.</p>"
       : "<p>En <b>Auditorías</b>, crea una auditoría nueva (o añádela a tu Plan Anual) con esta práctica como objeto.</p>";
-    confirmar(`<p>Se abrirá ${D.nom === "Mapa de Riesgos" ? "Auditorías" : D.nom} en otra pestaña. He copiado el nombre del proceso: <b>«${esc(proc)}»</b>.</p>${donde}<p class="field-sub">Cuando ${D.nom === "AMFE" ? "AMFE" : "esa app"} tenga el botón «Traer de DAFO», podrá traer este factor con su dato y su motivo directamente. Para otro dispositivo, descarga la copia de seguridad de DAFO: lleva el factor dentro.</p>`,
-      "Abrir " + (D.nom === "Mapa de Riesgos" ? "Auditorías" : D.nom), () => window.open(D.url, "_blank", "noopener"), { titulo: "Llevar a " + D.nom, peligro: false, otro: ["Descargar la copia", copiaSeguridad] });
+    confirmar(`<p>Se abrirá ${D.nom} en otra pestaña. He copiado el nombre del proceso: <b>«${esc(proc)}»</b>.</p>${donde}<p class="field-sub">${f.candidato.destino === "mapa" ? "Si trabajas en el mismo navegador, «Traer de DAFO» lo encuentra solo." : `Cuando ${D.nom === "AMFE" ? "AMFE" : "esa app"} tenga el botón «Traer de DAFO», podrá traer este factor con su dato y su motivo directamente.`} Para otro dispositivo, descarga la copia de seguridad de DAFO: lleva el factor dentro.</p>`,
+      "Abrir " + D.nom, () => window.open(D.url, "_blank", "noopener"), { titulo: "Llevar a " + D.nom, peligro: false, otro: ["Descargar la copia", copiaSeguridad] });
   }
   // Indicadores de la app Indicadores (su copia o localStorage["indicadores-datos"]), como en AMFE
   function indicadoresDe(o) {
