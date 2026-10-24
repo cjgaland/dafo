@@ -16,6 +16,7 @@
   const URL_AMFE = "https://cjgaland.github.io/amfe/";
   const URL_FLUJO = "https://cjgaland.github.io/flujograma/";
   const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
+  const URL_RONDAS = "https://cjgaland.github.io/rondas-seguridad/";
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -1416,7 +1417,7 @@
   }
 
   const API = {
-    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_AMFE, URL_FLUJO, URL_MAPA,
+    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_AMFE, URL_FLUJO, URL_MAPA, URL_RONDAS,
     lleno, sinTildes, num, entero1a5, corto, normal, plural, minuscula,
     CUADRANTES, TIPOS, esInterno, PASOS,
     TIPOS_OBJETO, FINALIDADES, aniosHorizonte, FUENTES_TIPO, APORTA, AREAS, AMBITOS, BLOQUES_ACSA, AREA_A_BLOQUE, areasDe, nombreArea,

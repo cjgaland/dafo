@@ -14,8 +14,10 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.07";
+  const APP_VERSION = "2026.08";
   const NOVEDADES = [
+    { version: "2026.08", fecha: "Octubre 2026", titulo: "Nueva app hermana: Rondas de Seguridad", cambios: [
+      "Enlace a la nueva app hermana Rondas de Seguridad en la portada y en «Acerca de»: programa y haz las rondas de seguridad de una unidad y descubre lo que falla una y otra vez."] },
     { version: "2026.07", fecha: "Octubre 2026", titulo: "Nueva app hermana: Mapa de Riesgos", cambios: [
       "Enlace a la nueva app hermana Mapa de Riesgos en la portada y en «Acerca de». «Llevar a… Mapa de Riesgos» abre ahora esa app (antes abría Auditorías), y su botón «Traer de DAFO» recoge los factores que marques para un mapa de riesgos."] },
     { version: "2026.06", fecha: "Octubre 2026", titulo: "Nueva app hermana: Flujograma", cambios: [
@@ -245,6 +247,7 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_FLUJO}" target="_blank" rel="noopener"><span class="guide-num">→</span><div><div class="guide-q">Flujograma ↗</div><div class="guide-a">App hermana: <b>dibuja el flujograma</b> del proceso que quieres mejorar, con sus puntos críticos.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b> para medir tus indicadores.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_MAPA}" target="_blank" rel="noopener"><span class="guide-num">◆</span><div><div class="guide-q">Mapa de Riesgos ↗</div><div class="guide-a">App hermana: <b>elabora el mapa de riesgos</b> de un proceso; con su «Traer de DAFO» recoge los factores que marques para un mapa de riesgos.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_RONDAS}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Rondas de Seguridad ↗</div><div class="guide-a">App hermana: <b>rondas de seguridad</b> en una unidad: lo que se ve a pie de cama y lo que falla una y otra vez.</div></div><span class="guide-go">›</span></a>
       </div>
       ${practica("<b>Protección de datos:</b> un DAFO analiza una unidad, no a personas. No escribas nombres de pacientes ni de profesionales, ni números de historia clínica.")}`;
   }

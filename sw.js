@@ -4,7 +4,7 @@
 //  Al cambiar cualquier archivo, incrementa CACHE_NAME.
 // ============================================================
 
-const CACHE_NAME = "dafo-v7";
+const CACHE_NAME = "dafo-v8";
 
 const ASSETS = [
   "./",
