@@ -16,6 +16,7 @@
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
   const APP_VERSION = "2026.13";
   const NOVEDADES = [
+    // [eco]
     { version: "2026.13", fecha: "Octubre 2026", titulo: "Traer de Lectura Crítica", cambios: [
       "En el paso 2 (fuentes de información), «Traer de Lectura Crítica» añade como fuente «Evidencia científica» un artículo que hayas leído con la app Lectura Crítica, con su resultado, su mensaje y la decisión; después puede respaldar un factor. Avisa si la decisión fue esperar o descartar."] },
     { version: "2026.12", fecha: "Octubre 2026", titulo: "Nueva app hermana: Lectura Crítica", cambios: [
@@ -33,11 +34,26 @@
       "Enlace a la nueva app hermana Mapa de Riesgos en la portada y en «Acerca de». «Llevar a… Mapa de Riesgos» abre ahora esa app (antes abría Auditorías), y su botón «Traer de DAFO» recoge los factores que marques para un mapa de riesgos."] },
     { version: "2026.06", fecha: "Octubre 2026", titulo: "Nueva app hermana: Flujograma", cambios: [
       "Enlace a la nueva app hermana Flujograma (escribe los pasos de un proceso y la app dibuja el diagrama, con sus puntos críticos) en la portada y en «Acerca de». La portada enlaza también a Tamaño Muestral."] },
+    // [/eco]
+    /* [ind]
+    { version: "2026.13", fecha: "Octubre 2026", titulo: "Evidencia de Lectura Crítica", cambios: [
+      "En el paso 2 (fuentes de información), «Cargar archivo de Lectura Crítica» añade como fuente «Evidencia científica» un artículo leído con la app Lectura Crítica (desde su copia de seguridad .json), con su referencia y su resultado principal. Avisa si la decisión fue esperar o descartar."] },
+    [/ind] */
+    // [eco]
     { version: "2026.05", fecha: "Octubre 2026", titulo: "Ponte a prueba, minicasos y «Traer de AMFE»", cambios: [
+    // [/eco]
+    /* [ind]
+    { version: "2026.05", fecha: "Octubre 2026", titulo: "Ponte a prueba, minicasos y AMFE", cambios: [
+    [/ind] */
       "«Ponte a prueba»: 20 preguntas en cuatro bloques, con su explicación y un enlace al tema de «Aprende» que conviene repasar.",
       "Tres ejercicios prácticos: ¿fortaleza, debilidad, oportunidad o amenaza?, ¿sirve como factor? y ¿qué estrategia CAME sale de este cruce?",
       "Seis minicasos para practicar un paso concreto: Urgencias, Farmacia, un proyecto nuevo, la Unidad de Calidad, el bloque quirúrgico y un hospital de día.",
+      // [eco]
       "«Traer de AMFE» en el paso 3: los AMFE de la app AMFE (de este navegador o de su copia) se proponen como debilidad o fortaleza, con su dato y su fuente.",
+      // [/eco]
+      /* [ind]
+      "«Cargar archivo de AMFE» en el paso 3: los AMFE de la copia de seguridad (.json) de la app AMFE se proponen como debilidad o fortaleza, con su dato y su fuente.",
+      [/ind] */
       "Todas las entregas del diseño, terminadas."] },
     { version: "2026.04", fecha: "Octubre 2026", titulo: "Trabajo en equipo", cambios: [
       "Paso 2: el equipo (perfil, cargo y papel) y las sesiones de trabajo, con asistentes y resultados, y avisos si el equipo es de un solo estamento o solo de dirección.",
@@ -63,7 +79,7 @@
       "Orientación estratégica (ofensiva, defensiva, de reorientación o de supervivencia), factores llave y cruces fuertes con una idea de estrategia de partida.",
       "Excel con los factores, la matriz DAFO, la matriz cruzada, las fuentes y la ficha del análisis.",
       "El ejemplo de la UGC trae ya su priorización y su matriz cruzada completa.",
-      "Preparado el intercambio con las otras apps del ecosistema (AMFE, Mapa de Riesgos, Auditorías)."] },
+      /*[eco]*/"Preparado el intercambio con las otras apps del ecosistema (AMFE, Mapa de Riesgos, Auditorías)."/*[/eco]*/] },
     { version: "2026.01", fecha: "Octubre 2026", titulo: "Primera versión: mirar hacia dentro y hacia fuera", cambios: [
       "Asistente en 8 pasos con «Tu siguiente paso» en la portada. En esta versión están disponibles los pasos 1 a 4.",
       "Qué se analiza y para qué: objeto, finalidad (acuerdo de gestión, acreditación, plan estratégico, proyecto…), horizonte, alcance, misión y visión, con textos propuestos.",
@@ -252,6 +268,7 @@
         <a class="guide-card" href="#/aprende"><span class="guide-num">?</span><div><div class="guide-q">Aprende</div><div class="guide-a">${C.TEMAS.length} temas <b>explicados fácil</b>: del qué es un DAFO al plan de acción.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/prueba"><span class="guide-num">✎</span><div><div class="guide-q">Ponte a prueba</div><div class="guide-a">${C.TEST.length} preguntas y <b>tres ejercicios</b>: ¿interno o externo?, ¿sirve como factor?, ¿qué estrategia sale?</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/glosario"><span class="guide-num">A–Z</span><div><div class="guide-q">Glosario</div><div class="guide-a">${C.GLOSARIO.length} términos <b>en lenguaje llano</b>, con buscador.</div></div><span class="guide-go">›</span></a>
+        <!-- [eco] -->
         <a class="guide-card guide-card--hermana" href="${L.URL_AMFE}" target="_blank" rel="noopener"><span class="guide-num">!</span><div><div class="guide-q">AMFE ↗</div><div class="guide-a">App hermana: si una debilidad es un <b>proceso con riesgo</b> para el paciente, analiza qué puede fallar en él.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_AUD}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Auditorías ↗</div><div class="guide-a">App hermana: <b>mide con una auditoría</b> si una práctica se cumple (higiene de manos, registros…).</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña los indicadores</b> con los que medirás tu plan de acción.</div></div><span class="guide-go">›</span></a>
@@ -260,6 +277,7 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_MAPA}" target="_blank" rel="noopener"><span class="guide-num">◆</span><div><div class="guide-q">Mapa de Riesgos ↗</div><div class="guide-a">App hermana: <b>elabora el mapa de riesgos</b> de un proceso; con su «Traer de DAFO» recoge los factores que marques para un mapa de riesgos.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_RONDAS}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Rondas de Seguridad ↗</div><div class="guide-a">App hermana: <b>rondas de seguridad</b> en una unidad: lo que se ve a pie de cama y lo que falla una y otra vez.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_LC}" target="_blank" rel="noopener"><span class="guide-num">LC</span><div><div class="guide-q">Lectura Crítica ↗</div><div class="guide-a">App hermana: <b>lee críticamente un artículo</b> para comprobar la evidencia de una estrategia antes de llevarla al plan.</div></div><span class="guide-go">›</span></a>
+        <!-- [/eco] -->
       </div>
       ${practica("<b>Protección de datos:</b> un DAFO analiza una unidad, no a personas. No escribas nombres de pacientes ni de profesionales, ni números de historia clínica.")}`;
   }
@@ -809,7 +827,7 @@
       <div class="pf-cab">${codBadge(f)}<span class="pf-txt"><b>${esc(f.texto)}</b>${sug && !c.destino ? `<span>La app sugiere: <b>${L.DESTINOS[sug].nom}</b></span>` : ""}</span></div>
       <div class="pf-acc no-print">${[["", "No"], ["amfe", "AMFE"], ["mapa", "Mapa de Riesgos"], ["auditoria", "Auditoría"]].map(([v, t]) => `<button type="button" class="pf-btn${(c.destino || "") === v ? " on" : ""}" data-act="cand" data-id="${f.id}" data-v="${v}" title="${v ? esc(L.DESTINOS[v].que) : "No necesita un análisis aparte"}">${t}</button>`).join("")}</div>
       ${c.destino ? `<div class="dos-col">${campo(f, "candidato.proceso", "Proceso o práctica que se analizaría", { bind: bx(f, "candidato.proceso"), ph: "p. ej. Conciliación de la medicación al alta hospitalaria" })}${campo(f, "candidato.motivo", "Por qué", { bind: bx(f, "candidato.motivo"), ph: "p. ej. Riesgo directo para el paciente" })}</div>
-        <div class="toolbar no-print"><button class="btn btn--sm" data-act="llevar" data-id="${f.id}">Llevar a ${L.DESTINOS[c.destino].nom} ↗</button></div>` : ""}
+        <!--[eco]--><div class="toolbar no-print"><button class="btn btn--sm" data-act="llevar" data-id="${f.id}">Llevar a ${L.DESTINOS[c.destino].nom} ↗</button></div><!--[/eco]-->` : ""}
     </div>`;
   }
   function paso7(d) {
@@ -1412,6 +1430,7 @@
     toast("Copiado a tus DAFO. Ya es tuyo: cámbialo a tu gusto.", 4000);
   }
 
+  // [eco]
   // ---------- Llevar un candidato a otra app ----------
   // Cada app escribe solo en sus datos: DAFO deja el candidato en su paquete de intercambio y abre la otra app.
   function llevarA(d, f) {
@@ -1425,6 +1444,7 @@
     confirmar(`<p>Se abrirá ${D.nom} en otra pestaña. He copiado el nombre del proceso: <b>«${esc(proc)}»</b>.</p>${donde}<p class="field-sub">${f.candidato.destino === "mapa" ? "Si trabajas en el mismo navegador, «Traer de DAFO» lo encuentra solo." : `Cuando ${D.nom === "AMFE" ? "AMFE" : "esa app"} tenga el botón «Traer de DAFO», podrá traer este factor con su dato y su motivo directamente.`} Para otro dispositivo, descarga la copia de seguridad de DAFO: lleva el factor dentro.</p>`,
       "Abrir " + D.nom, () => window.open(D.url, "_blank", "noopener"), { titulo: "Llevar a " + D.nom, peligro: false, otro: ["Descargar la copia", copiaSeguridad] });
   }
+  // [/eco]
   // Indicadores de la app Indicadores (su copia o localStorage["indicadores-datos"]), como en AMFE
   function indicadoresDe(o) {
     if (!o || typeof o !== "object" || !Array.isArray(o.indicadores)) return null;
@@ -1738,7 +1758,9 @@
       if (f.candidato.destino && !lleno(f.candidato.proceso)) f.candidato.proceso = L.corto(f.texto, 120);
       tocado(d); repintar();
     }
+    // [eco]
     else if (act === "llevar" && d) llevarA(d, buscaEn(d.factores, id));
+    // [/eco]
     // --- Paso 8 · plan ---
     else if (act === "ac-add" && d) {
       const e = buscaEn(d.estrategias, id); if (!e) return;
@@ -1754,10 +1776,15 @@
     else if (act === "me-add" && d) { const r = buscaAccion(d, id); if (!r) return; r.x.seguimiento.push(Object.assign(L.nuevaMedida(genId()), { fecha: hoyIso() })); tocado(d); repintar(); }
     else if (act === "me-del" && d) { const r = buscaMedida(d, id); if (!r) return; r.x.seguimiento = r.x.seguimiento.filter(m => m.id !== id); tocado(d); repintar(); }
     else if (act === "ind-traer" && d) {
+      // [eco]
       let l = null; try { l = indicadoresDe(JSON.parse(leer("indicadores-datos") || "null")); } catch (er) { /* */ }
       indPara = id;
       if (l && l.length) { indImportados = l; const z = $(`[data-zind="${id}"]`), r = buscaAccion(d, id); if (z && r) z.innerHTML = zonaInd(r.x); }
       else confirmar("<p>No hay indicadores de la app <b>Indicadores</b> en este navegador.</p><p>Si los tienes en otro dispositivo, carga su copia de seguridad (.json).</p>", "Cargar una copia", () => $("#input-ind").click(), { titulo: "Traer de Indicadores", peligro: false });
+      // [/eco]
+      /* [ind]
+      indPara = id; $("#input-ind").click();
+      [/ind] */
     }
     else if (act === "sug-concl" && d) {
       const s = L.conclusionesSugeridas(d); if (!s) { toast("Aún no hay datos suficientes para proponer un texto.", 3000); return; }
@@ -1774,9 +1801,14 @@
     else if (act === "doc-ver") irInforme(b.dataset.doc);
     else if (act === "doc-word" && d) descargarWord(d, b.dataset.doc);
     else if (act === "amfe-traer" && d) {
+      // [eco]
       let l = null; try { l = L.leerAmfe(JSON.parse(leer("amfe-intercambio") || "null")); } catch (er) { /* */ }
       if (l && l.length) { amfeLista = l; repintar(); }
       else confirmar("<p>No hay ningún AMFE de la app <b>AMFE</b> en este navegador.</p><p>Si lo tienes en otro dispositivo, carga su copia de seguridad (.json).</p>", "Cargar la copia", () => $("#input-amfe").click(), { titulo: "Traer de AMFE", peligro: false });
+      // [/eco]
+      /* [ind]
+      $("#input-amfe").click();
+      [/ind] */
     }
     else if (act === "amfe-copia") $("#input-amfe").click();
     else if (act === "amfe-cerrar") { amfeLista = null; repintar(); }
@@ -1851,12 +1883,18 @@
   let lcCargadas = null, lcPendiente = null;
   function traerLC(titulo, alElegir) {
     lcPendiente = { titulo, alElegir };
+    // [eco]
     let r = null; try { r = L.lecturasDe(JSON.parse(leer("lecturacritica-intercambio") || "null")); } catch (e) { /* */ }
     const lista = lcCargadas || (r && r.lecturas && r.lecturas.length ? r.lecturas : null);
     if (lista) { elegirLC(lista); return; }
     confirmar(r && r.error === "version" ? "<p>Las lecturas de este navegador son de una versión de <b>Lectura Crítica</b> que esta app aún no sabe leer.</p>"
       : "<p>No hay lecturas de la app <b>Lectura Crítica</b> en este navegador.</p><p>Si las tienes en otro dispositivo, carga su copia de seguridad (.json).</p>",
       "Cargar una copia", () => $("#input-lc").click(), { titulo, peligro: false });
+    // [/eco]
+    /* [ind]
+    if (lcCargadas) { elegirLC(lcCargadas); return; }
+    $("#input-lc").click();
+    [/ind] */
   }
   function elegirLC(lista) {
     const { titulo, alElegir } = lcPendiente, cortar = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;

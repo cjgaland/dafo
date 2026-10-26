@@ -10,6 +10,7 @@
   "use strict";
 
   const VERSION_DATOS = 1;
+  // [eco]
   const URL_AUD = "https://cjgaland.github.io/auditorias/";
   const URL_IND = "https://cjgaland.github.io/indicadores-calidad/";
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
@@ -18,6 +19,7 @@
   const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
   const URL_RONDAS = "https://cjgaland.github.io/rondas-seguridad/";
   const URL_LC = "https://cjgaland.github.io/lectura-critica/";
+  // [/eco]
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -870,9 +872,9 @@
 
   // ---------- Candidatos para otras apps (AMFE, Mapa de Riesgos, Auditorías) ----------
   const DESTINOS = {
-    amfe: { nom: "AMFE", que: "Un proceso concreto con riesgo para el paciente: analizar paso a paso qué puede fallar.", url: URL_AMFE },
-    mapa: { nom: "Mapa de Riesgos", que: "Un proceso completo que hay que ver de principio a fin, con su flujograma.", url: URL_MAPA },
-    auditoria: { nom: "Auditoría", que: "Una práctica que hay que medir: si se cumple y en qué medida.", url: URL_AUD }
+    amfe: { nom: "AMFE", que: "Un proceso concreto con riesgo para el paciente: analizar paso a paso qué puede fallar."/*[eco]*/, url: URL_AMFE/*[/eco]*/ },
+    mapa: { nom: "Mapa de Riesgos", que: "Un proceso completo que hay que ver de principio a fin, con su flujograma."/*[eco]*/, url: URL_MAPA/*[/eco]*/ },
+    auditoria: { nom: "Auditoría", que: "Una práctica que hay que medir: si se cumple y en qué medida."/*[eco]*/, url: URL_AUD/*[/eco]*/ }
   };
   const RE_AUDITAR = /higiene de manos|registr|cumpliment|cumplimiento|adherencia|identificacion del paciente|consentimiento|caducad/;
   const RE_PROCESO = /conciliacion|medicacion|transfusion|alta|ingreso|derivacion|triaje|cirugia|quirofan|identificacion|caidas|ulceras|lesiones por presion|extraccion|muestras|vacuna|urgencias|traslado/;
@@ -1469,7 +1471,10 @@
 
   const API = {
     FORMATO_LC, VERSION_LC, DECISION_LC, lecturasDe, referenciaLC, textoEvidenciaLC,
-    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_AMFE, URL_FLUJO, URL_MAPA, URL_RONDAS, URL_LC,
+    VERSION_DATOS,
+    // [eco]
+    URL_AUD, URL_IND, URL_TM, URL_AMFE, URL_FLUJO, URL_MAPA, URL_RONDAS, URL_LC,
+    // [/eco]
     lleno, sinTildes, num, entero1a5, corto, normal, plural, minuscula,
     CUADRANTES, TIPOS, esInterno, PASOS,
     TIPOS_OBJETO, FINALIDADES, aniosHorizonte, FUENTES_TIPO, APORTA, AREAS, AMBITOS, BLOQUES_ACSA, AREA_A_BLOQUE, areasDe, nombreArea,
