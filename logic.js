@@ -103,6 +103,7 @@
     plan: { nom: "Planes y estrategias del sistema", ej: "Plan estratégico del Área, estrategias del sistema sanitario" },
     normativa: { nom: "Normativa", ej: "Normativa nueva o en preparación que os afecta" },
     profesionales: { nom: "Opinión de los profesionales", ej: "Encuesta o grupo con el personal de la unidad" },
+    evidencia: { nom: "Evidencia científica", ej: "Artículo leído con la app Lectura Crítica" },
     otros: { nom: "Otra fuente", ej: "" }
   };
   // Quién aporta el factor (para ver si se ha escuchado a todos)
@@ -762,6 +763,17 @@
     d.factores.push(f); return f;
   }
 
+  // Añade como fuente el artículo de una lectura de Lectura Crítica (ver «Traer de Lectura Crítica»); no lo repite
+  function fuenteDeLectura(d, x, genId) {
+    const nombre = referenciaLC(x).slice(0, 300);
+    if (d.fuentes.some(y => y.tipo === "evidencia" && normal(y.nombre) === normal(nombre))) return null;
+    const punto = s => /[.!?…]$/.test(s) ? s : s + ".";
+    const nota = [x.tipoNombre, ...x.resultadosClave.map(r => r.texto), x.mensaje, x.decision ? "Decisión tras la lectura crítica: " + DECISION_LC[x.decision].toLowerCase() : ""]
+      .filter(lleno).map(punto).join(" ").slice(0, 1000);
+    const fu = Object.assign(nuevaFuente(genId()), { tipo: "evidencia", nombre, fecha: x.anio, nota });
+    d.fuentes.push(fu); return fu;
+  }
+
   // ---------- Paso 7 · Estrategias CAME ----------
   // Cada estrategia: código E1, E2… (E de «estrategia»; su tipo CAME va aparte, con su nombre, para no confundirla con A1 = amenaza)
   const CAME = {
@@ -1417,7 +1429,46 @@
     return { dafos: Array.from(m.values()) };
   }
 
+  // ---------- «Traer de Lectura Crítica» (paquete «lecturacritica-lecturas» v1) ----------
+  // Lee localStorage["lecturacritica-intercambio"] o la copia .json de Lectura Crítica (clave «intercambio»).
+  // Mismo código en AMFE, DAFO, Auditorías e Indicadores. Se copia como texto: no hay vínculo vivo.
+  const FORMATO_LC = "lecturacritica-lecturas", VERSION_LC = 1;
+  const DECISION_LC = { aplicar: "Aplicar", esperar: "Esperar", descartar: "Descartar" };
+  function lecturasDe(o) {
+    if (o && typeof o === "object" && !o.formato && o.intercambio && typeof o.intercambio === "object") o = o.intercambio;
+    if (!o || typeof o !== "object" || o.formato !== FORMATO_LC || !Array.isArray(o.lecturas)) return { error: "formato" };
+    if (o.version !== VERSION_LC) return { error: "version" };
+    const t = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : typeof v === "number" && isFinite(v) ? String(v) : "";
+    const nm = v => typeof v === "number" && isFinite(v) ? v : null;
+    const ok = v => typeof v === "string" && v.trim() !== "";
+    const lecturas = o.lecturas.slice(0, 500).filter(x => x && typeof x === "object" && typeof x.id === "string" && !/^ej-/.test(x.id)).map(x => {
+      const p = x.pico && typeof x.pico === "object" ? x.pico : {};
+      const rc = Array.isArray(x.resultadosClave) ? x.resultadosClave.filter(r => r && typeof r === "object").slice(0, 5)
+        .map(r => ({ desenlace: t(r.desenlace, 300), medida: t(r.medida, 40), valor: nm(r.valor), icInf: nm(r.icInf), icSup: nm(r.icSup), texto: t(r.texto, 600) })) : [];
+      return {
+        id: t(x.id, 80), titulo: t(x.titulo, 500), cita: t(x.cita, 1500), doi: t(x.doi, 200), pmid: t(x.pmid, 30), url: t(x.url, 500), anio: t(x.anio, 10),
+        pregunta: t(x.pregunta, 1200), pico: { p: t(p.p, 600), i: t(p.i, 600), c: t(p.c, 600), o: t(p.o, 600) }, tipoNombre: t(x.tipoNombre, 120),
+        decision: DECISION_LC[x.decision] ? x.decision : "", motivo: t(x.motivo, 2000), resultadosClave: rc, mensaje: t(x.mensaje, 2000), fecha: t(x.fecha, 20)
+      };
+    }).filter(x => ok(x.titulo) || ok(x.cita));
+    return { lecturas };
+  }
+  // La referencia en una línea (la cita si la hay; si no, título, año y DOI)
+  const referenciaLC = x => (x.cita || [x.titulo, x.anio, x.doi ? "doi: " + x.doi : ""].filter(Boolean).join(". ")).replace(/\s+/g, " ").trim();
+  // Texto que se copia: referencia, tipo de estudio, resultado principal, mensaje y decisión
+  function textoEvidenciaLC(x) {
+    const punto = s => /[.!?…]$/.test(s) ? s : s + ".";
+    const r = x.resultadosClave.map(y => y.texto).filter(Boolean);
+    return [
+      punto("Evidencia: " + referenciaLC(x).replace(/\.$/, "") + (x.tipoNombre ? ` (${x.tipoNombre.charAt(0).toLowerCase() + x.tipoNombre.slice(1)})` : "")),
+      ...r.map(s => punto("Resultado: " + s)),
+      x.mensaje ? punto(x.mensaje) : "",
+      x.decision ? `Decisión tras la lectura crítica: ${DECISION_LC[x.decision].toLowerCase()}.` : ""
+    ].filter(Boolean).join(" ");
+  }
+
   const API = {
+    FORMATO_LC, VERSION_LC, DECISION_LC, lecturasDe, referenciaLC, textoEvidenciaLC,
     VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_AMFE, URL_FLUJO, URL_MAPA, URL_RONDAS, URL_LC,
     lleno, sinTildes, num, entero1a5, corto, normal, plural, minuscula,
     CUADRANTES, TIPOS, esInterno, PASOS,
@@ -1433,7 +1484,7 @@
     CAME, TIPOS_CAME, CAME_DE_BLOQUE, IMPACTO, VIABILIDAD, ZONAS_EST, zonaEstrategia, esElegida, codigoEst, siguienteNumEst, ordenarEstrategias, elegidas, factoresDe, estrategiasPropuestas, avisosEstrategias,
     DESTINOS, sugerirDestino, candidatos, ESTADOS, FUERZAS, fuerzaMedida, vencida, leerEstandar, semaforo, ultimaMedida, smartAuto, accionesDe, avisosPlan, notaCalidad,
     conclusionesSugeridas, introduccionSugerida, nuevaPersona, nuevoControl, renovarIds, nuevaEstrategia, nuevaAccion, nuevaMedida, nuevoCandidato,
-    documentoInforme, documentoResumen, documentoLamina, leerAmfe, factorDeAmfe,
+    documentoInforme, documentoResumen, documentoLamina, leerAmfe, factorDeAmfe, fuenteDeLectura,
     ROLES, ESTAMENTOS, ESTAMENTO_NOM, estamentoDe, PERFILES_SUG, SESIONES_TIPO, nuevoMiembro, nuevaSesion, etiquetaMiembro, avisosEquipo,
     PREGUNTAS_IDEAS, nuevaIdea, nuevoBloque, ideasParecidas, voto321, ponerVoto321, ranking, ideaAFactor, bloqueAFactor, avisosIdeas,
     mediaVotos, discrepancia, ponerVoto, usarMedia, avisosVotos, bloqueAcsaDe, porBloquesAcsa,

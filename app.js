@@ -14,8 +14,10 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.12";
+  const APP_VERSION = "2026.13";
   const NOVEDADES = [
+    { version: "2026.13", fecha: "Octubre 2026", titulo: "Traer de Lectura Crítica", cambios: [
+      "En el paso 2 (fuentes de información), «Traer de Lectura Crítica» añade como fuente «Evidencia científica» un artículo que hayas leído con la app Lectura Crítica, con su resultado, su mensaje y la decisión; después puede respaldar un factor. Avisa si la decisión fue esperar o descartar."] },
     { version: "2026.12", fecha: "Octubre 2026", titulo: "Nueva app hermana: Lectura Crítica", cambios: [
       "Enlace a la nueva app hermana Lectura Crítica en la portada y en «Acerca de»: lee críticamente un artículo paso a paso (plantillas de CASPe con preguntas propias, calculadoras y un veredicto con semáforo) antes de cambiar la práctica."] },
     { version: "2026.11", fecha: "Octubre 2026", titulo: "Nueva herramienta de apoyo: Legibilidad", cambios: [
@@ -371,7 +373,7 @@
   }
   function paso2(d) {
     const fin = L.FINALIDADES[d.finalidad], sug = fin ? fin.fuentes : [];
-    const tipos = [...sug, ...Object.keys(L.FUENTES_TIPO).filter(k => !sug.includes(k))].filter(k => k !== "otros");
+    const tipos = [...sug, ...Object.keys(L.FUENTES_TIPO).filter(k => !sug.includes(k))].filter(k => k !== "otros" && k !== "evidencia");
     return `
       ${idea("<b>Datos antes que opiniones.</b> Cada factor del DAFO debería poder responder a «¿cómo lo sabéis?». Apuntad aquí las fuentes y, en los pasos 3 y 4, cada factor podrá citar la suya.")}
       ${facil(`<p>Sirven los resultados del <b>acuerdo de gestión</b> anterior, el <b>informe de acreditación</b>, los <b>indicadores</b>, la <b>encuesta de satisfacción</b> y las <b>reclamaciones</b> (la voz de los pacientes), la <b>encuesta de cultura de seguridad</b> y las <b>notificaciones de incidentes</b>, las <b>auditorías</b> y los <b>AMFE</b> hechos, la <b>memoria</b> de actividad y los <b>planes</b> del sistema sanitario.</p>
@@ -380,7 +382,7 @@
       <div class="card no-print"><p class="field-sub">Añade con un toque las fuentes habituales${fin ? ` (primero, las que suelen servir para «${esc(fin.nom)}»)` : ""} y después ajústalas:</p>
         <div class="quick">${tipos.map(k => `<button type="button" class="chip${d.fuentes.some(x => x.tipo === k) ? " active" : sug.includes(k) ? " chip--accent" : ""}" data-act="fu-sug" data-t="${k}">+ ${esc(L.FUENTES_TIPO[k].nom)}</button>`).join("")}</div></div>
       <div class="sub-lista">${d.fuentes.map((x, i) => fuenteCard(d, x, i)).join("")}</div>
-      <div class="toolbar no-print"><button class="btn${d.fuentes.length ? "" : " btn--primary"}" data-act="fu-add">+ Añadir otra fuente</button></div>
+      <div class="toolbar no-print"><button class="btn${d.fuentes.length ? "" : " btn--primary"}" data-act="fu-add">+ Añadir otra fuente</button><button class="btn" data-act="fu-lc" title="Añade como fuente un artículo leído con la app Lectura Crítica">📄 Traer de Lectura Crítica</button></div>
       <div data-zona="avisos">${avisosGenerales(d, 2)}</div>
       ${equipoHtml(d)}`;
   }
@@ -1570,6 +1572,12 @@
       if (d.fuentes.some(x => x.tipo === k)) { toast("Ya tienes una fuente de ese tipo. Si es otra distinta, usa «Añadir otra fuente».", 3000); return; }
       d.fuentes.push(Object.assign(L.nuevaFuente(genId()), { tipo: k, nombre: T.ej })); tocado(d); repintar();
     }
+    else if (act === "fu-lc" && d) {
+      traerLC("Traer de Lectura Crítica", x => {
+        if (!L.fuenteDeLectura(d, x, genId)) { toast("Ese artículo ya está entre tus fuentes.", 3000); return; }
+        tocado(d); repintar(); toast("Artículo añadido a las fuentes. En los pasos 3 y 4 puede respaldar un factor.", 3500);
+      });
+    }
     else if (act === "fu-add" && d) {
       const x = L.nuevaFuente(genId()); d.fuentes.push(x); tocado(d); repintar();
       const el = $(`[data-u="${x.id}"][data-f="nombre"]`); if (el) { el.focus(); el.scrollIntoView({ block: "center" }); }
@@ -1836,6 +1844,42 @@
   let cerrados = [];
   window.addEventListener("beforeprint", () => { cerrados = $$("details").filter(d => !d.open); cerrados.forEach(d => { d.open = true; }); });
   window.addEventListener("afterprint", () => { cerrados.forEach(d => { d.open = false; }); cerrados = []; });
+
+  // ---------- «Traer de Lectura Crítica» (mismo código en AMFE, DAFO, Auditorías e Indicadores) ----------
+  // traerLC(título de la ventana, función que recibe la lectura elegida). Lee el paquete de este navegador
+  // o, si no hay, ofrece cargar la copia .json de Lectura Crítica (#input-lc).
+  let lcCargadas = null, lcPendiente = null;
+  function traerLC(titulo, alElegir) {
+    lcPendiente = { titulo, alElegir };
+    let r = null; try { r = L.lecturasDe(JSON.parse(leer("lecturacritica-intercambio") || "null")); } catch (e) { /* */ }
+    const lista = lcCargadas || (r && r.lecturas && r.lecturas.length ? r.lecturas : null);
+    if (lista) { elegirLC(lista); return; }
+    confirmar(r && r.error === "version" ? "<p>Las lecturas de este navegador son de una versión de <b>Lectura Crítica</b> que esta app aún no sabe leer.</p>"
+      : "<p>No hay lecturas de la app <b>Lectura Crítica</b> en este navegador.</p><p>Si las tienes en otro dispositivo, carga su copia de seguridad (.json).</p>",
+      "Cargar una copia", () => $("#input-lc").click(), { titulo, peligro: false });
+  }
+  function elegirLC(lista) {
+    const { titulo, alElegir } = lcPendiente, cortar = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;
+    const fila = (x, i) => `<label class="lc-op"><input type="radio" name="lc-sel" value="${i}"${i ? "" : " checked"} /><span><b>${esc(cortar(x.titulo || L.referenciaLC(x), 110))}</b>`
+      + `<small>${esc([x.tipoNombre, x.anio].filter(lleno).join(" · "))}${x.tipoNombre || x.anio ? " · " : ""}${x.decision ? `<span class="lc-dec lc-dec--${x.decision}">${L.DECISION_LC[x.decision]}</span>` : "Sin decisión"}</small></span></label>`;
+    confirmar(`<p>Elige la lectura cuya evidencia quieres traer. Se copia como texto, que luego puedes cambiar.</p><div class="lc-lista">${lista.map(fila).join("")}</div>`, "Traer", () => {
+      const s = document.querySelector('input[name="lc-sel"]:checked'), x = s && lista[Number(s.value)]; if (!x) return;
+      if (x.decision === "aplicar") { alElegir(x); return; }
+      confirmar(`<p>La decisión de esta lectura fue <b>${x.decision ? L.DECISION_LC[x.decision].toLowerCase() : "ninguna todavía"}</b>: con ella sola no basta para cambiar la práctica.</p><p>¿Traerla de todos modos?</p>`,
+        "Traer igualmente", () => alElegir(x), { titulo, peligro: false });
+    }, { titulo, peligro: false });
+  }
+  $("#input-lc").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let r = null; try { r = L.lecturasDe(JSON.parse(fr.result)); } catch (er) { /* */ }
+      if (!r || r.error) { toast(r && r.error === "version" ? "Esa copia es de una versión de Lectura Crítica que esta app aún no sabe leer." : "Ese archivo no es una copia de la app Lectura Crítica.", 4500); return; }
+      if (!r.lecturas.length) { toast("Esa copia no tiene lecturas con título o referencia.", 4000); return; }
+      lcCargadas = r.lecturas; if (lcPendiente) elegirLC(lcCargadas);
+    };
+    fr.readAsText(f);
+  });
 
   // ---------- Tema ----------
   function setTema(t) {

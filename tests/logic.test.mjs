@@ -472,5 +472,16 @@ eq("Aprende: 7 temas", C.TEMAS.map(x => x.n), [1, 2, 3, 4, 5, 6, 7]);
 t("Aprende: cada tema completo", C.TEMAS.every(x => x.titulo && x.minuto.length >= 3 && x.secciones.length >= 2 && x.minicaso && x.practica.href));
 t("Glosario: más de 30 términos sin repetir", C.GLOSARIO.length >= 30 && new Set(C.GLOSARIO.map(g => g[0])).size === C.GLOSARIO.length);
 
+// «Traer de Lectura Crítica»: el artículo entra como fuente «Evidencia científica» y no se repite
+{
+  const d = L.nuevoDafo(gid(), "2026-10-26");
+  const x = L.lecturasDe({ formato: "lecturacritica-lecturas", version: 1, lecturas: [{ id: "l1", titulo: "Rondas de seguridad y cultura de seguridad", cita: "Autor B, et al. BMJ Qual Saf. 2023;32:10-8.", anio: "2023", tipoNombre: "Revisión sistemática", decision: "aplicar", resultadosClave: [{ texto: "Clima de seguridad: DM 0,4 (IC 95 %: 0,2 a 0,6)" }], mensaje: "Las rondas mejoran el clima de seguridad" }] }).lecturas[0];
+  const fu = L.fuenteDeLectura(d, x, gid);
+  t("Lectura Crítica: crea la fuente", fu && fu.tipo === "evidencia" && fu.nombre === "Autor B, et al. BMJ Qual Saf. 2023;32:10-8." && fu.fecha === "2023");
+  eq("Lectura Crítica: qué dice la fuente", fu.nota, "Revisión sistemática. Clima de seguridad: DM 0,4 (IC 95 %: 0,2 a 0,6). Las rondas mejoran el clima de seguridad. Decisión tras la lectura crítica: aplicar.");
+  t("Lectura Crítica: no repite el mismo artículo", L.fuenteDeLectura(d, x, gid) === null && d.fuentes.length === 1);
+  t("Lectura Crítica: la fuente pasa el saneado", L.sanearDatos({ app: "dafo", v: L.VERSION_DATOS, dafos: [d] }, gid).dafos[0].fuentes[0].tipo === "evidencia");
+}
+
 console.log(`${ok} pruebas correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);
