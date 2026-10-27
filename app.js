@@ -14,9 +14,11 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.13";
+  const APP_VERSION = "2026.14";
   const NOVEDADES = [
     // [eco]
+    { version: "2026.14", fecha: "Octubre 2026", titulo: "Nueva app hermana: ACR · Ishikawa", cambios: [
+      "Enlace a la nueva app hermana ACR · Ishikawa en la portada y en «Acerca de»: busca las causas de fondo de un problema o de un incidente con el diagrama de Ishikawa (espina de pescado) y el análisis causa raíz, sin buscar culpables; trae fallos de AMFE y de Mapa de Riesgos, pasos de Flujograma, puntos calientes de Rondas, indicadores y lecturas críticas."] },
     { version: "2026.13", fecha: "Octubre 2026", titulo: "Traer de Lectura Crítica", cambios: [
       "En el paso 2 (fuentes de información), «Traer de Lectura Crítica» añade como fuente «Evidencia científica» un artículo que hayas leído con la app Lectura Crítica, con su resultado, su mensaje y la decisión; después puede respaldar un factor. Avisa si la decisión fue esperar o descartar."] },
     { version: "2026.12", fecha: "Octubre 2026", titulo: "Nueva app hermana: Lectura Crítica", cambios: [
@@ -277,6 +279,7 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_MAPA}" target="_blank" rel="noopener"><span class="guide-num">◆</span><div><div class="guide-q">Mapa de Riesgos ↗</div><div class="guide-a">App hermana: <b>elabora el mapa de riesgos</b> de un proceso; con su «Traer de DAFO» recoge los factores que marques para un mapa de riesgos.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_RONDAS}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Rondas de Seguridad ↗</div><div class="guide-a">App hermana: <b>rondas de seguridad</b> en una unidad: lo que se ve a pie de cama y lo que falla una y otra vez.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_LC}" target="_blank" rel="noopener"><span class="guide-num">LC</span><div><div class="guide-q">Lectura Crítica ↗</div><div class="guide-a">App hermana: <b>lee críticamente un artículo</b> para comprobar la evidencia de una estrategia antes de llevarla al plan.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_ACR}" target="_blank" rel="noopener"><span class="guide-num">ACR</span><div><div class="guide-q">ACR · Ishikawa ↗</div><div class="guide-a">App hermana: si una debilidad es un problema cuyas <b>causas de fondo</b> no tienes claras, búscalas con el diagrama de Ishikawa y el análisis causa raíz, sin buscar culpables.</div></div><span class="guide-go">›</span></a>
         <!-- [/eco] -->
       </div>
       ${practica("<b>Protección de datos:</b> un DAFO analiza una unidad, no a personas. No escribas nombres de pacientes ni de profesionales, ni números de historia clínica.")}`;
